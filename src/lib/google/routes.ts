@@ -1,0 +1,133 @@
+/* ──────────────────────────────────────────────────────────────
+   Google Routes API — travel time between two points for a mode.
+   Best-effort: returns null on any failure so the caller can fall
+   back to the AI's estimated travel time.
+   ────────────────────────────────────────────────────────────── */
+
+import type { Transport } from "@/lib/types";
+
+const ROUTES_ENDPOINT =
+  "https://routes.googleapis.com/directions/v2:computeRoutes";
+const MATRIX_ENDPOINT =
+  "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix";
+
+type LatLng = { lat: number; lng: number };
+
+function travelMode(transport: Transport): string {
+  switch (transport) {
+    case "walking":
+      return "WALK";
+    case "public":
+      return "TRANSIT";
+    case "driving":
+    case "uber":
+    default:
+      return "DRIVE";
+  }
+}
+
+/** Route Matrix supports DRIVE / WALK / BICYCLE / TWO_WHEELER — not TRANSIT. */
+export function supportsMatrix(transport: Transport): boolean {
+  return travelMode(transport) !== "TRANSIT";
+}
+
+interface MatrixElement {
+  originIndex?: number;
+  destinationIndex?: number;
+  duration?: string; // e.g. "720s"
+  condition?: string; // "ROUTE_EXISTS" | "ROUTE_NOT_FOUND"
+}
+
+/**
+ * Full NxN travel-time matrix (minutes) between the given points for a mode,
+ * via one Compute Route Matrix request. Returns null if unavailable (no key,
+ * transit mode, <2 points, or an API error) so the caller can skip optimizing.
+ * Unreachable pairs are left as Infinity.
+ */
+export async function travelMatrix(
+  points: LatLng[],
+  transport: Transport
+): Promise<number[][] | null> {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return null;
+  if (!supportsMatrix(transport)) return null;
+  if (points.length < 2) return null;
+
+  try {
+    const waypoints = points.map((p) => ({
+      waypoint: { location: { latLng: { latitude: p.lat, longitude: p.lng } } },
+    }));
+
+    const res = await fetch(MATRIX_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask":
+          "originIndex,destinationIndex,duration,condition",
+      },
+      body: JSON.stringify({
+        origins: waypoints,
+        destinations: waypoints,
+        travelMode: travelMode(transport),
+      }),
+    });
+
+    if (!res.ok) return null;
+    const data = (await res.json()) as MatrixElement[];
+    if (!Array.isArray(data)) return null;
+
+    const n = points.length;
+    const m: number[][] = Array.from({ length: n }, () => Array(n).fill(Infinity));
+    for (let i = 0; i < n; i++) m[i][i] = 0;
+
+    for (const el of data) {
+      const oi = el.originIndex;
+      const di = el.destinationIndex;
+      if (typeof oi !== "number" || typeof di !== "number") continue;
+      if (el.condition && el.condition !== "ROUTE_EXISTS") continue;
+      if (!el.duration) continue;
+      const secs = parseInt(el.duration.replace("s", ""), 10);
+      if (!Number.isNaN(secs)) m[oi][di] = Math.round(secs / 60);
+    }
+    return m;
+  } catch {
+    return null;
+  }
+}
+
+/** Minutes to travel between two coordinates, or null if unavailable. */
+export async function travelMinutes(
+  from: LatLng,
+  to: LatLng,
+  transport: Transport
+): Promise<number | null> {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch(ROUTES_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "routes.duration",
+      },
+      body: JSON.stringify({
+        origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
+        destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
+        travelMode: travelMode(transport),
+      }),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const duration: string | undefined = data?.routes?.[0]?.duration; // e.g. "720s"
+    if (!duration) return null;
+    const seconds = parseInt(duration.replace("s", ""), 10);
+    if (Number.isNaN(seconds)) return null;
+    return Math.round(seconds / 60);
+  } catch {
+    return null;
+  }
+}
