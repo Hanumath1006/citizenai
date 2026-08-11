@@ -38,7 +38,10 @@ export async function findPlace(
   city: string
 ): Promise<PlaceMatch | null> {
   const apiKey = key();
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.error("[places] GOOGLE_MAPS_API_KEY is not set — skipping lookup.");
+    return null;
+  }
 
   try {
     const res = await fetch(PLACES_ENDPOINT, {
@@ -58,10 +61,21 @@ export async function findPlace(
       next: { revalidate: 60 * 60 },
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // Surface the real reason (bad key, API not enabled, key restricted to
+      // referrers/IPs, quota) instead of silently degrading.
+      const detail = await res.text().catch(() => "");
+      console.error(
+        `[places] lookup failed for "${query}" — HTTP ${res.status}: ${detail.slice(0, 400)}`
+      );
+      return null;
+    }
     const data = await res.json();
     const p = data?.places?.[0];
-    if (!p) return null;
+    if (!p) {
+      console.warn(`[places] no match for "${query}, ${city}".`);
+      return null;
+    }
 
     const hours = p.regularOpeningHours;
     return {
@@ -78,7 +92,8 @@ export async function findPlace(
         ? hours.weekdayDescriptions
         : null,
     };
-  } catch {
+  } catch (err) {
+    console.error(`[places] lookup threw for "${query}":`, err);
     return null;
   }
 }
@@ -102,7 +117,13 @@ export async function fetchPhotoBytes(
   try {
     const url = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${width}&key=${apiKey}`;
     const res = await fetch(url, { next: { revalidate: 60 * 60 * 24 } });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      console.error(
+        `[places] photo fetch failed — HTTP ${res.status}: ${detail.slice(0, 300)}`
+      );
+      return null;
+    }
     return {
       body: await res.arrayBuffer(),
       contentType: res.headers.get("content-type") ?? "image/jpeg",

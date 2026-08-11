@@ -73,7 +73,13 @@ export async function travelMatrix(
       }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      console.error(
+        `[routes] matrix failed — HTTP ${res.status}: ${detail.slice(0, 400)}`
+      );
+      return null;
+    }
     const data = (await res.json()) as MatrixElement[];
     if (!Array.isArray(data)) return null;
 
