@@ -39,3 +39,14 @@ export function formatDuration(mins?: number | null) {
 export function titleCase(s: string) {
   return s.replace(/\w\S*/g, (t) => t[0].toUpperCase() + t.slice(1).toLowerCase());
 }
+
+/**
+ * Absolute origin for building auth redirect links. Prefers the configured
+ * site URL and falls back to the current origin in the browser.
+ */
+export function getSiteUrl() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
+  if (configured) return configured;
+  if (typeof window !== "undefined") return window.location.origin;
+  return "";
+}
