@@ -14,7 +14,7 @@ import {
 
 /**
  * Sets a new password. Relies on the recovery session created by
- * /auth/confirm when the user clicked the emailed link.
+ * /auth/callback when the user clicked the emailed link.
  */
 export function ResetPasswordForm() {
   const router = useRouter();

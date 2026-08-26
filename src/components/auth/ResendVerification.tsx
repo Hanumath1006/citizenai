@@ -18,7 +18,7 @@ export function ResendVerification({ email }: { email: string }) {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: `${getSiteUrl()}/auth/confirm` },
+      options: { emailRedirectTo: `${getSiteUrl()}/auth/callback` },
     });
     setBusy(false);
     if (error) {

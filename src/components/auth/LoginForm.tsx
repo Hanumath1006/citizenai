@@ -58,7 +58,7 @@ export function LoginForm({ next = "/dashboard" }: { next?: string }) {
     await supabase.auth.resend({
       type: "signup",
       email: email.trim(),
-      options: { emailRedirectTo: `${getSiteUrl()}/auth/confirm` },
+      options: { emailRedirectTo: `${getSiteUrl()}/auth/callback` },
     });
     setBusy(false);
     setResent(true);

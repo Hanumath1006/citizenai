@@ -38,7 +38,7 @@ export function SignupForm() {
       options: {
         // Picked up by the handle_new_user() trigger to seed profiles.full_name.
         data: { full_name: name.trim() || null },
-        emailRedirectTo: `${getSiteUrl()}/auth/confirm`,
+        emailRedirectTo: `${getSiteUrl()}/auth/callback`,
       },
     });
 
