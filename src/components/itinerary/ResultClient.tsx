@@ -126,7 +126,10 @@ export function ResultClient() {
       const res = await fetch("/api/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itinerary: result.itinerary }),
+        body: JSON.stringify({
+          itinerary: result.itinerary,
+          generationId: result.generationId ?? null,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

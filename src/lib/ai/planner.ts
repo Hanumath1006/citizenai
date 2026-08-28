@@ -1,6 +1,7 @@
 import type { PlannerInput, WeatherSummary } from "@/lib/types";
 import { BUDGET_LABELS, TRANSPORT_LABELS } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
+import type { CallRecorder } from "@/lib/usage/types";
 
 /** The itinerary "shape" the model produces, before venue enrichment. */
 export interface PlannedStop {
@@ -159,6 +160,13 @@ interface GeminiResponse {
     finishReason?: string;
   }[];
   promptFeedback?: { blockReason?: string };
+  /** Token accounting — what the admin cost dashboard prices AI spend from. */
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    thoughtsTokenCount?: number;
+    totalTokenCount?: number;
+  };
   error?: { message?: string };
 }
 
@@ -166,12 +174,19 @@ interface GeminiResponse {
 export async function planItinerary(
   input: PlannerInput,
   weather: WeatherSummary,
-  opts?: { refinement?: string; previous?: PlannedItinerary }
+  opts?: {
+    refinement?: string;
+    previous?: PlannedItinerary;
+    rec?: CallRecorder;
+  }
 ): Promise<PlannedItinerary> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }
+
+  const operation = opts?.refinement ? "refine_itinerary" : "plan_itinerary";
+  const startedAt = Date.now();
 
   const res = await fetch(ENDPOINT(MODEL()), {
     method: "POST",
@@ -206,12 +221,33 @@ export async function planItinerary(
   });
 
   if (!res.ok) {
+    opts?.rec?.recordGemini({
+      operation,
+      tokensIn: 0,
+      tokensOut: 0,
+      latencyMs: Date.now() - startedAt,
+      ok: false,
+      statusCode: res.status,
+    });
     const body = (await res.json().catch(() => ({}))) as GeminiResponse;
     const detail = body?.error?.message ?? `HTTP ${res.status}`;
     throw new Error(`Gemini request failed: ${detail}`);
   }
 
   const data = (await res.json()) as GeminiResponse;
+
+  // Reasoning tokens are billed at the output rate, so they belong in
+  // tokensOut — leaving them out understates AI spend on thinking models.
+  const usage = data.usageMetadata;
+  opts?.rec?.recordGemini({
+    operation,
+    tokensIn: usage?.promptTokenCount ?? 0,
+    tokensOut:
+      (usage?.candidatesTokenCount ?? 0) + (usage?.thoughtsTokenCount ?? 0),
+    latencyMs: Date.now() - startedAt,
+    ok: true,
+    statusCode: res.status,
+  });
 
   if (data.promptFeedback?.blockReason) {
     throw new Error(

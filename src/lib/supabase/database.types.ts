@@ -5,6 +5,9 @@ export type Budget = "budget" | "moderate" | "premium" | "luxury";
 export type TravelStyle = "solo" | "couple" | "family" | "friends";
 export type Transport = "walking" | "driving" | "uber" | "public";
 export type TripStatus = "upcoming" | "completed";
+export type UserRole = "user" | "admin";
+export type AccountStatus = "active" | "disabled";
+export type ApiProvider = "gemini" | "places" | "routes" | "weather";
 
 export interface ProfileRow {
   id: string;
@@ -16,8 +19,62 @@ export interface ProfileRow {
   default_transport: Transport | null;
   default_interests: string[];
   onboarded: boolean;
+  role: UserRole;
+  status: AccountStatus;
+  last_seen_at: string | null;
+  disabled_at: string | null;
+  disabled_reason: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** One itinerary generation attempt, saved or not. See 0002_admin_and_usage.sql. */
+export interface GenerationRow {
+  id: string;
+  user_id: string | null;
+  trip_id: string | null;
+  city: string;
+  trip_date: string | null;
+  budget: Budget | null;
+  travel_style: TravelStyle | null;
+  transport: Transport | null;
+  interests: string[];
+  stop_count: number | null;
+  refined: boolean;
+  ok: boolean;
+  error: string | null;
+  duration_ms: number | null;
+  cost_usd: number;
+  created_at: string;
+}
+
+/** One outbound third-party API call. */
+export interface ApiEventRow {
+  id: number;
+  generation_id: string | null;
+  user_id: string | null;
+  provider: ApiProvider;
+  operation: string;
+  units: number;
+  tokens_in: number;
+  tokens_out: number;
+  cost_usd: number;
+  latency_ms: number | null;
+  ok: boolean;
+  status_code: number | null;
+  created_at: string;
+}
+
+export interface AdminAuditRow {
+  id: number;
+  admin_id: string | null;
+  admin_email: string | null;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  details: string | null;
+  ip: string | null;
+  created_at: string;
 }
 
 export interface TripRow {

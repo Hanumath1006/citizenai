@@ -6,6 +6,7 @@ import { travelMinutes, travelMatrix } from "@/lib/google/routes";
 import { bestOrder } from "@/lib/itinerary/optimize";
 import { isOpenAt, dayHoursText, hhmmToMinutes } from "@/lib/itinerary/hours";
 import { planItinerary, type PlannedItinerary } from "@/lib/ai/planner";
+import type { CallRecorder } from "@/lib/usage/types";
 
 // How far a stop may drift from its planner-intended arrival time during
 // route optimization, in minutes. Keeps the day's arc (morning coffee,
@@ -71,9 +72,14 @@ function applyOptimizedOrder(
  */
 export async function generateItinerary(
   input: PlannerInput,
-  opts?: { refinement?: string; previous?: PlannedItinerary }
+  opts?: {
+    refinement?: string;
+    previous?: PlannedItinerary;
+    rec?: CallRecorder;
+  }
 ): Promise<{ itinerary: Itinerary; plan: PlannedItinerary }> {
-  const weather = await getForecast(input.city, input.date);
+  const rec = opts?.rec;
+  const weather = await getForecast(input.city, input.date, rec);
   const plan = await planItinerary(input, weather, opts);
 
   // Weekday of the trip (0=Sunday … 6=Saturday), used for hours lookups.
@@ -82,7 +88,7 @@ export async function generateItinerary(
   // Enrich each stop with real venue data + opening hours (in parallel).
   const enrichedRaw = await Promise.all(
     plan.stops.map(async (s, i) => {
-      const match = await findPlace(s.name, input.city);
+      const match = await findPlace(s.name, input.city, rec);
       const stop: ItineraryStop = {
         order: i + 1,
         name: match?.name ?? s.name,
@@ -134,7 +140,8 @@ export async function generateItinerary(
   if (allHaveCoords && enriched.length >= 3) {
     const matrix = await travelMatrix(
       coords as { lat: number; lng: number }[],
-      input.transport
+      input.transport,
+      rec
     );
     if (matrix) {
       const aiArrival = enriched.map((s) => hhmmToMinutes(s.arriveTime));
@@ -204,7 +211,8 @@ export async function generateItinerary(
         const mins = await travelMinutes(
           { lat: a.lat, lng: a.lng },
           { lat: b.lat, lng: b.lng },
-          input.transport
+          input.transport,
+          rec
         );
         if (mins != null) a.travelToNextMin = mins;
       }

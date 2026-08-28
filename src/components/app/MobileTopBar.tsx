@@ -17,7 +17,7 @@ const nav = [
   { href: "/settings", label: "Settings" },
 ];
 
-export function MobileTopBar() {
+export function MobileTopBar({ isAdmin = false }: { isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -35,7 +35,7 @@ export function MobileTopBar() {
       </div>
       {open && (
         <nav className="border-t border-line px-3 py-3">
-          {nav.map((item) => (
+          {[...nav, ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : [])].map((item) => (
             <Link
               key={item.href}
               href={item.href}

@@ -12,6 +12,8 @@ const RESULT_KEY = "citizenai:planner:result";
 export interface StoredResult {
   itinerary: Itinerary;
   plan: PlannedItinerary;
+  /** Links the saved trip back to the generation that produced it. */
+  generationId?: string | null;
 }
 
 export function saveInput(input: PlannerInput) {

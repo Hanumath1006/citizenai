@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchPhotoBytes } from "@/lib/google/places";
+import { recordStandaloneCall } from "@/lib/usage/recorder";
+import { PRICING } from "@/lib/usage/pricing";
 
 /** Proxies Google Places photos so the API key stays server-side. */
 export async function GET(request: Request) {
@@ -11,7 +13,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "missing name" }, { status: 400 });
   }
 
+  // Photos are fetched lazily by the browser, long after the itinerary was
+  // generated, so they are recorded as standalone events rather than being
+  // attributed to a generation.
+  const startedAt = Date.now();
   const photo = await fetchPhotoBytes(name, Number.isFinite(width) ? width : 1200);
+
+  await recordStandaloneCall({
+    provider: "places",
+    operation: "photo",
+    unitPrice: PRICING.placesPhoto,
+    latencyMs: Date.now() - startedAt,
+    ok: Boolean(photo),
+  });
+
   if (!photo) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }

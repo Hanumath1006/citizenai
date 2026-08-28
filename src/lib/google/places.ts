@@ -4,6 +4,9 @@
    itinerary still renders with the AI's own estimates.
    ────────────────────────────────────────────────────────────── */
 
+import { PRICING } from "@/lib/usage/pricing";
+import type { CallRecorder } from "@/lib/usage/types";
+
 const PLACES_ENDPOINT = "https://places.googleapis.com/v1/places:searchText";
 
 /** A single open→close interval from Google (day: 0=Sunday … 6=Saturday). */
@@ -35,7 +38,8 @@ function key() {
  */
 export async function findPlace(
   query: string,
-  city: string
+  city: string,
+  rec?: CallRecorder
 ): Promise<PlaceMatch | null> {
   const apiKey = key();
   if (!apiKey) {
@@ -43,6 +47,7 @@ export async function findPlace(
     return null;
   }
 
+  const startedAt = Date.now();
   try {
     const res = await fetch(PLACES_ENDPOINT, {
       method: "POST",
@@ -59,6 +64,15 @@ export async function findPlace(
       }),
       // Places data changes slowly; cache briefly to save quota.
       next: { revalidate: 60 * 60 },
+    });
+
+    rec?.recordFlat({
+      provider: "places",
+      operation: "text_search",
+      unitPrice: PRICING.placesTextSearch,
+      latencyMs: Date.now() - startedAt,
+      ok: res.ok,
+      statusCode: res.status,
     });
 
     if (!res.ok) {
@@ -93,6 +107,13 @@ export async function findPlace(
         : null,
     };
   } catch (err) {
+    rec?.recordFlat({
+      provider: "places",
+      operation: "text_search",
+      unitPrice: PRICING.placesTextSearch,
+      latencyMs: Date.now() - startedAt,
+      ok: false,
+    });
     console.error(`[places] lookup threw for "${query}":`, err);
     return null;
   }
