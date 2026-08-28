@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { UsageRecorder } from "@/lib/usage/recorder";
 import type { Itinerary } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -15,8 +16,12 @@ export async function POST(request: Request) {
   }
 
   let itinerary: Itinerary;
+  let generationId: string | null = null;
   try {
-    ({ itinerary } = (await request.json()) as { itinerary: Itinerary });
+    ({ itinerary, generationId = null } = (await request.json()) as {
+      itinerary: Itinerary;
+      generationId?: string | null;
+    });
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
@@ -82,6 +87,10 @@ export async function POST(request: Request) {
     // Roll back the orphaned trip.
     await supabase.from("trips").delete().eq("id", trip.id);
     return NextResponse.json({ error: "Could not save stops." }, { status: 500 });
+  }
+
+  if (generationId) {
+    await UsageRecorder.attachTrip(generationId, trip.id, user.id);
   }
 
   return NextResponse.json({ id: trip.id });

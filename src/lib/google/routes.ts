@@ -5,6 +5,8 @@
    ────────────────────────────────────────────────────────────── */
 
 import type { Transport } from "@/lib/types";
+import { PRICING } from "@/lib/usage/pricing";
+import type { CallRecorder } from "@/lib/usage/types";
 
 const ROUTES_ENDPOINT =
   "https://routes.googleapis.com/directions/v2:computeRoutes";
@@ -46,12 +48,19 @@ interface MatrixElement {
  */
 export async function travelMatrix(
   points: LatLng[],
-  transport: Transport
+  transport: Transport,
+  rec?: CallRecorder
 ): Promise<number[][] | null> {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) return null;
   if (!supportsMatrix(transport)) return null;
   if (points.length < 2) return null;
+
+  // Route Matrix bills per element, not per request: an NxN matrix is N²
+  // billable elements. Charging it as one call would understate Maps spend
+  // by roughly an order of magnitude on a 5-stop day.
+  const elements = points.length * points.length;
+  const startedAt = Date.now();
 
   try {
     const waypoints = points.map((p) => ({
@@ -71,6 +80,16 @@ export async function travelMatrix(
         destinations: waypoints,
         travelMode: travelMode(transport),
       }),
+    });
+
+    rec?.recordFlat({
+      provider: "routes",
+      operation: "compute_route_matrix",
+      unitPrice: PRICING.routesElement,
+      units: elements,
+      latencyMs: Date.now() - startedAt,
+      ok: res.ok,
+      statusCode: res.status,
     });
 
     if (!res.ok) {
@@ -98,6 +117,14 @@ export async function travelMatrix(
     }
     return m;
   } catch {
+    rec?.recordFlat({
+      provider: "routes",
+      operation: "compute_route_matrix",
+      unitPrice: PRICING.routesElement,
+      units: elements,
+      latencyMs: Date.now() - startedAt,
+      ok: false,
+    });
     return null;
   }
 }
@@ -106,11 +133,13 @@ export async function travelMatrix(
 export async function travelMinutes(
   from: LatLng,
   to: LatLng,
-  transport: Transport
+  transport: Transport,
+  rec?: CallRecorder
 ): Promise<number | null> {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) return null;
 
+  const startedAt = Date.now();
   try {
     const res = await fetch(ROUTES_ENDPOINT, {
       method: "POST",
@@ -126,6 +155,15 @@ export async function travelMinutes(
       }),
     });
 
+    rec?.recordFlat({
+      provider: "routes",
+      operation: "compute_routes",
+      unitPrice: PRICING.routesElement,
+      latencyMs: Date.now() - startedAt,
+      ok: res.ok,
+      statusCode: res.status,
+    });
+
     if (!res.ok) return null;
     const data = await res.json();
     const duration: string | undefined = data?.routes?.[0]?.duration; // e.g. "720s"
@@ -134,6 +172,13 @@ export async function travelMinutes(
     if (Number.isNaN(seconds)) return null;
     return Math.round(seconds / 60);
   } catch {
+    rec?.recordFlat({
+      provider: "routes",
+      operation: "compute_routes",
+      unitPrice: PRICING.routesElement,
+      latencyMs: Date.now() - startedAt,
+      ok: false,
+    });
     return null;
   }
 }

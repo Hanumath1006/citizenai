@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { generateItinerary } from "@/lib/itinerary/generate";
+import { UsageRecorder } from "@/lib/usage/recorder";
 import type { PlannerInput } from "@/lib/types";
 import type { PlannedItinerary } from "@/lib/ai/planner";
 
@@ -49,16 +50,38 @@ export async function POST(request: Request) {
     interests: body.interests ?? [],
   };
 
+  // Tracks every third-party call this request makes so the admin dashboard
+  // can price it. Flushed once below, on both the success and failure paths —
+  // a generation that failed halfway still cost real money.
+  const rec = new UsageRecorder(user.id);
+
   try {
     const { itinerary, plan } = await generateItinerary(input, {
       refinement: body.refinement,
       previous: body.previous,
+      rec,
     });
-    return NextResponse.json({ itinerary, plan });
+
+    const generationId = await rec.flush({
+      input,
+      stopCount: itinerary.stops.length,
+      refined: Boolean(body.refinement),
+      ok: true,
+    });
+
+    return NextResponse.json({ itinerary, plan, generationId });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to generate itinerary.";
     console.error("Itinerary generation failed:", err);
+
+    await rec.flush({
+      input,
+      refined: Boolean(body.refinement),
+      ok: false,
+      error: message,
+    });
+
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

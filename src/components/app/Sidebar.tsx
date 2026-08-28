@@ -10,6 +10,7 @@ import {
   User,
   Settings,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,7 @@ const nav = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -52,6 +53,17 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {/* Rendered only for admins — the server decides, not the client. */}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="mt-2 flex items-center gap-3 rounded-xl border border-line px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:border-ink/20 hover:bg-line-soft hover:text-ink"
+          >
+            <ShieldCheck className="h-4.5 w-4.5" />
+            Admin
+          </Link>
+        )}
       </nav>
 
       <div className="mt-auto rounded-[var(--radius-card)] bg-gradient-to-br from-brand-soft to-accent-soft p-5">

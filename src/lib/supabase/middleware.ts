@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /** Routes that require an authenticated session. */
 const PROTECTED_PREFIXES = [
+  "/admin",
   "/dashboard",
   "/plan",
   "/trips",
@@ -15,6 +16,11 @@ const PROTECTED_PREFIXES = [
 /**
  * Refreshes the Supabase auth session on every request and guards
  * protected routes. Wired up in `src/middleware.ts`.
+ *
+ * This layer only answers "are you signed in?". Whether a signed-in user is
+ * an *admin* is decided in the admin layout and in every admin route handler,
+ * where a database read is affordable — middleware runs on every request and
+ * is the wrong place for one.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
