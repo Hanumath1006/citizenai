@@ -35,10 +35,12 @@ export default async function DashboardPage() {
 
   const name = displayName(profile, user?.email);
   const upcoming = trips.filter((t) => t.status === "upcoming");
+  // "Recent" means trips you've actually been on. Previously this listed
+  // every trip, so an outing appeared under Upcoming and Recent at the same
+  // time and marking it done moved nothing.
+  const recent = trips.filter((t) => t.status === "completed");
   const cities = new Set(trips.map((t) => t.city)).size;
-  const placesVisited = trips
-    .filter((t) => t.status === "completed")
-    .reduce((n, t) => n + t.stopCount, 0);
+  const placesVisited = recent.reduce((n, t) => n + t.stopCount, 0);
 
   const weatherCity = profile?.home_city || upcoming[0]?.city || null;
   const weather = weatherCity
@@ -123,8 +125,8 @@ export default async function DashboardPage() {
             )}
           </section>
 
-          {/* Recent */}
-          {trips.length > 0 && (
+          {/* Recent — outings you've marked done */}
+          {recent.length > 0 && (
             <section>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Recent trips</h2>
@@ -136,7 +138,7 @@ export default async function DashboardPage() {
                 </Link>
               </div>
               <div className="grid gap-6 sm:grid-cols-3">
-                {trips.slice(0, 3).map((t) => (
+                {recent.slice(0, 3).map((t) => (
                   <TripCard key={t.id} trip={t} />
                 ))}
               </div>

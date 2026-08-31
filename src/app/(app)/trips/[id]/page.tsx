@@ -7,6 +7,7 @@ import { formatCostRange, formatDuration, titleCase } from "@/lib/utils";
 import { StopCard } from "@/components/itinerary/StopCard";
 import { WeatherBadge } from "@/components/itinerary/WeatherBadge";
 import { DeleteTripButton } from "@/components/trips/DeleteTripButton";
+import { CompleteTripButton } from "@/components/trips/CompleteTripButton";
 
 export default async function TripDetailPage({
   params,
@@ -67,6 +68,11 @@ export default async function TripDetailPage({
             city={it.input.city}
           />
         ))}
+      </div>
+
+      {/* Closing action, reached by scrolling past the last stop. */}
+      <div className="mt-8">
+        <CompleteTripButton id={id} status={it.status ?? "upcoming"} />
       </div>
     </div>
   );
