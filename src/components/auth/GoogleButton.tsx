@@ -24,7 +24,17 @@ export function GoogleButton({
       provider: "google",
       options: {
         redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`,
-        queryParams: { access_type: "offline", prompt: "consent" },
+        // No queryParams on purpose. This flow only establishes *identity* —
+        // we read the user's email, name and avatar from the ID token and
+        // never call a Google API on their behalf.
+        //
+        // `access_type: "offline"` asked Google for a refresh token for that
+        // (unused) API access, and `prompt: "consent"` forced the consent
+        // screen on every single sign-in rather than only the first. While
+        // the OAuth consent screen is in Testing mode, Google restricts
+        // offline-access grants and answers that combination with
+        // access_denied — which read to the user as the dialog cancelling
+        // itself. Asking only for identity lets returning users straight in.
       },
     });
     if (error) setLoading(false);
