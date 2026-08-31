@@ -41,8 +41,24 @@ export async function handleAuthRedirect(request: Request) {
     console.error("[auth] no code or token_hash present:", request.url);
   }
 
-  // Expired / already-used links are the common failure — send the user
-  // somewhere they can request a fresh one.
+  // Before reporting failure, check whether a session already exists.
+  //
+  // This route can be hit twice for a single sign-in — a browser prefetch, a
+  // retried navigation, or a duplicated redirect. The auth code is one-time:
+  // the first request spends it and establishes the session, and the second
+  // then fails with "code/state already used". Treating that second request
+  // as a failure tells the user sign-in didn't work at the exact moment it
+  // did, and bounces them away from the session they just got.
+  //
+  // If a valid session is present, the exchange succeeded — whoever won the
+  // race — so honour it and continue to the destination.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) return NextResponse.redirect(`${origin}${destination}`);
+
+  // Genuinely expired / already-used links — send the user somewhere they
+  // can request a fresh one.
   const fallback =
     type === "recovery" ? "/forgot-password?error=expired" : "/login?error=auth";
   return NextResponse.redirect(`${origin}${fallback}`);
