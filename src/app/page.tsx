@@ -88,8 +88,8 @@ export default async function Home() {
             </h1>
             <p className="mt-6 max-w-md text-lg leading-relaxed text-muted">
               CitizenAI builds a smart, optimized local itinerary from your
-              interests, budget, time and travel style — in seconds. No more
-              juggling five apps to plan one outing.
+              interests, budget, time and travel style in seconds. No more
+              juggling Google Maps, Reddit, TikTok, Yelp, and weather apps just to plan one afternoon.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-5">
               <Button href={authed ? "/plan" : "/login?next=/plan"} size="lg">
