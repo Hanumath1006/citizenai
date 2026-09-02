@@ -59,8 +59,8 @@ const steps = [
   },
   {
     n: "03",
-    title: "Tweak and go",
-    body: "Nudge the plan with one tap until it's perfect, then save and explore.",
+    title: "Make it yours",
+    body: "Too busy? Too expensive? Not your vibe? Refine the plan in one tap.",
   },
 ];
 
