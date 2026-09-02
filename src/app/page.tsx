@@ -49,7 +49,7 @@ const features = [
 const steps = [
   {
     n: "01",
-    title: "Tell us the basics",
+    title: "Tell us what you are into",
     body: "City, date, time window, budget, who you're with, and what you're into.",
   },
   {
