@@ -21,8 +21,8 @@ const features = [
   },
   {
     icon: Wand2,
-    title: "Refine in one tap",
-    body: "Too packed? Too pricey? Tap “More relaxed” or “More budget-friendly” and the plan rebuilds instantly.",
+    title: "Change the vibe",
+    body: "Too packed? Too expensive? Tap once and CitizenAI rebuilds the plan.",
   },
   {
     icon: CloudSun,
@@ -41,8 +41,8 @@ const features = [
   },
   {
     icon: MapPin,
-    title: "Built for who you're with",
-    body: "Solo, couple, family or friends — pacing and picks adapt to your group.",
+    title: "Built around your group",
+    body: "Solo adventure, date night, family day, or weekend with friends — CitizenAI adapts.",
   },
 ];
 
@@ -111,7 +111,7 @@ export default async function Home() {
                 <ImageIcon className="h-4 w-4" /> Real venue photos
               </span>
               <span className="inline-flex items-center gap-2">
-                <Wand2 className="h-4 w-4" /> Refine in one tap
+                <Wand2 className="h-4 w-4" /> Change the vibe
               </span>
             </div>
           </div>
