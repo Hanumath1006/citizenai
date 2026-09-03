@@ -12,17 +12,22 @@ import {
   Loader2,
   RotateCcw,
   Route,
+  CalendarDays,
 } from "lucide-react";
 import type { PlannerInput } from "@/lib/types";
+import { isOptimized, totalTravelMin } from "@/lib/types";
 import type { PlannedItinerary } from "@/lib/ai/planner";
-import { formatCostRange, formatDuration } from "@/lib/utils";
+import { formatCostRange, formatDuration, dateRangeLabel } from "@/lib/utils";
 import {
   loadInput,
   loadResult,
   saveResult,
   type StoredResult,
 } from "@/lib/plannerSession";
-import { StopCard } from "@/components/itinerary/StopCard";
+import {
+  DayItinerary,
+  DayNav,
+} from "@/components/itinerary/DayItinerary";
 import { RefinementBar } from "@/components/itinerary/RefinementBar";
 import { WeatherBadge } from "@/components/itinerary/WeatherBadge";
 import { Button } from "@/components/ui/Button";
@@ -165,6 +170,10 @@ export function ResultClient() {
   }
 
   const it = result!.itinerary;
+  const multiDay = it.days.length > 1;
+  const stopCount = it.days.reduce((n, d) => n + d.stops.length, 0);
+  const tripOptimized = isOptimized(it);
+  const travelMin = totalTravelMin(it);
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8">
@@ -178,16 +187,14 @@ export function ResultClient() {
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3 text-sm text-faint">
         <span className="uppercase tracking-wide">
-          {it.input.city} · {it.input.date}
+          {it.input.city} · {dateRangeLabel(it.input.date, it.input.endDate)}
         </span>
-        <WeatherBadge weather={it.weather} />
-        {it.optimized && (
+        {!multiDay && <WeatherBadge weather={it.weather} />}
+        {tripOptimized && (
           <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] bg-brand-soft px-3 py-1.5 text-brand">
             <Route className="h-3.5 w-3.5" />
             Route-optimized
-            {it.totalTravelMin != null && it.totalTravelMin > 0
-              ? ` · ${formatDuration(it.totalTravelMin)} travel`
-              : ""}
+            {travelMin > 0 ? ` · ${formatDuration(travelMin)} travel` : ""}
           </span>
         )}
       </div>
@@ -197,19 +204,30 @@ export function ResultClient() {
       <p className="mt-2 text-muted">{it.summary}</p>
 
       {/* Stats */}
-      <div className="mt-6 grid grid-cols-3 gap-3">
-        <Stat icon={MapPin} label="Stops" value={String(it.stops.length)} />
+      <div
+        className={`mt-6 grid gap-3 ${multiDay ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}
+      >
+        {multiDay && (
+          <Stat icon={CalendarDays} label="Days" value={String(it.days.length)} />
+        )}
+        <Stat icon={MapPin} label="Stops" value={String(stopCount)} />
         <Stat
           icon={Clock}
-          label="Duration"
+          label={multiDay ? "Hours/day" : "Duration"}
           value={formatDuration(it.durationHours * 60)}
         />
         <Stat
           icon={Wallet}
-          label="Est. cost"
+          label={multiDay ? "Est. total" : "Est. cost"}
           value={formatCostRange(it.estCostLow, it.estCostHigh)}
         />
       </div>
+
+      {multiDay && (
+        <div className="mt-6">
+          <DayNav days={it.days} />
+        </div>
+      )}
 
       {/* Refinement */}
       <div className="mt-6">
@@ -231,14 +249,16 @@ export function ResultClient() {
             </span>
           </div>
         )}
-        {it.stops.map((stop, i) => (
-          <StopCard
-            key={`${stop.order}-${stop.name}`}
-            stop={stop}
-            isLast={i === it.stops.length - 1}
-            city={it.input.city}
-          />
-        ))}
+        <div className="space-y-10">
+          {it.days.map((day) => (
+            <DayItinerary
+              key={day.dayIndex}
+              day={day}
+              city={it.input.city}
+              showHeader={multiDay}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Save */}

@@ -11,6 +11,8 @@ import {
   type Transport,
   type TravelStyle,
   type PlannerInput,
+  MAX_TRIP_DAYS,
+  requestedDayCount,
 } from "@/lib/types";
 import { Label, Input, Select, Pill } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/Button";
@@ -29,6 +31,9 @@ export function PlannerForm({
 
   const [city, setCity] = useState(defaults?.city ?? "");
   const [date, setDate] = useState(defaults?.date ?? today);
+  const [endDate, setEndDate] = useState(
+    defaults?.endDate ?? defaults?.date ?? today
+  );
   const [timeStart, setTimeStart] = useState(defaults?.timeStart ?? "14:00");
   const [timeEnd, setTimeEnd] = useState(defaults?.timeEnd ?? "20:00");
   const [budget, setBudget] = useState<Budget>(defaults?.budget ?? "moderate");
@@ -44,6 +49,15 @@ export function PlannerForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const dayCount = requestedDayCount(date, endDate);
+  const multiDay = dayCount > 1;
+
+  /** Keep the range coherent: moving the start past the end drags the end with it. */
+  function changeStart(next: string) {
+    setDate(next);
+    if (endDate < next) setEndDate(next);
+  }
+
   function toggleInterest(i: string) {
     setInterests((prev) =>
       prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
@@ -56,10 +70,17 @@ export function PlannerForm({
     if (!city.trim()) return setError("Please enter a city.");
     if (timeEnd <= timeStart)
       return setError("End time must be after start time.");
+    if (endDate < date)
+      return setError("The end date can't be before the start date.");
+    if (dayCount > MAX_TRIP_DAYS)
+      return setError(
+        `Trips are limited to ${MAX_TRIP_DAYS} days for now — try a shorter range.`
+      );
 
     const input: PlannerInput = {
       city: city.trim(),
       date,
+      endDate,
       timeStart,
       timeEnd,
       budget,
@@ -88,22 +109,39 @@ export function PlannerForm({
         />
       </div>
 
-      {/* Date + time */}
+      {/* Dates + time */}
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
           <Label>
-            <Calendar className="h-3.5 w-3.5" /> Date
+            <Calendar className="h-3.5 w-3.5" /> Dates
           </Label>
-          <Input
-            type="date"
-            value={date}
-            min={today}
-            onChange={(e) => setDate(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={date}
+              min={today}
+              onChange={(e) => changeStart(e.target.value)}
+              aria-label="First day"
+            />
+            <span className="text-faint">—</span>
+            <Input
+              type="date"
+              value={endDate}
+              min={date}
+              onChange={(e) => setEndDate(e.target.value)}
+              aria-label="Last day"
+            />
+          </div>
+          <p className="text-xs text-faint">
+            {multiDay
+              ? `${dayCount}-day trip — you'll get a plan for each day.`
+              : "Same day for a single outing, or pick a later end date for a trip."}
+          </p>
         </div>
         <div className="space-y-2">
           <Label>
-            <Clock className="h-3.5 w-3.5" /> Available time
+            <Clock className="h-3.5 w-3.5" />{" "}
+            {multiDay ? "Available time each day" : "Available time"}
           </Label>
           <div className="flex items-center gap-2">
             <Input
@@ -189,7 +227,11 @@ export function PlannerForm({
       <div className={cn("flex justify-end pt-2")}>
         <Button type="submit" size="lg" disabled={submitting}>
           <Sparkles className="h-4 w-4" />
-          {submitting ? "Generating…" : "Generate my outing"}
+          {submitting
+            ? "Generating…"
+            : multiDay
+              ? `Generate my ${dayCount}-day trip`
+              : "Generate my outing"}
         </Button>
       </div>
     </form>

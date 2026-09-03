@@ -35,6 +35,37 @@ export function formatDuration(mins?: number | null) {
   return `${h} hr ${m} min`;
 }
 
+/**
+ * Human label for a trip's dates: "Aug 23, 2026" for one day, or
+ * "Aug 23 – 27, 2026" for a range, collapsing the repeated month and year.
+ */
+export function dateRangeLabel(startDate: string, endDate?: string): string {
+  const fmt = (d: string, opts: Intl.DateTimeFormatOptions) =>
+    new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", {
+      ...opts,
+      timeZone: "UTC",
+    });
+
+  const full: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  };
+
+  if (!endDate || endDate === startDate) return fmt(startDate, full);
+
+  const sameMonth = startDate.slice(0, 7) === endDate.slice(0, 7);
+  const sameYear = startDate.slice(0, 4) === endDate.slice(0, 4);
+
+  if (sameMonth) {
+    return `${fmt(startDate, { month: "short", day: "numeric" })} – ${fmt(endDate, { day: "numeric", year: "numeric" })}`;
+  }
+  if (sameYear) {
+    return `${fmt(startDate, { month: "short", day: "numeric" })} – ${fmt(endDate, full)}`;
+  }
+  return `${fmt(startDate, full)} – ${fmt(endDate, full)}`;
+}
+
 /** Title-case a slug or label. */
 export function titleCase(s: string) {
   return s.replace(/\w\S*/g, (t) => t[0].toUpperCase() + t.slice(1).toLowerCase());

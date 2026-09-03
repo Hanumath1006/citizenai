@@ -3,6 +3,7 @@ import { getUser } from "@/lib/auth";
 import { generateItinerary } from "@/lib/itinerary/generate";
 import { UsageRecorder } from "@/lib/usage/recorder";
 import type { PlannerInput } from "@/lib/types";
+import { MAX_TRIP_DAYS, requestedDayCount } from "@/lib/types";
 import type { PlannedItinerary } from "@/lib/ai/planner";
 
 export const runtime = "nodejs";
@@ -18,6 +19,13 @@ function validate(b: Partial<Body>): string | null {
   if (!b.date) return "Please pick a date.";
   if (!b.timeStart || !b.timeEnd) return "Please set a time window.";
   if (b.timeEnd <= b.timeStart) return "End time must be after start time.";
+
+  // A missing endDate means a single-day outing, which stays valid.
+  const endDate = b.endDate || b.date;
+  if (endDate < b.date) return "The end date can't be before the start date.";
+  if (requestedDayCount(b.date, endDate) > MAX_TRIP_DAYS) {
+    return `Trips are limited to ${MAX_TRIP_DAYS} days for now — try a shorter range.`;
+  }
   return null;
 }
 
@@ -42,6 +50,7 @@ export async function POST(request: Request) {
   const input: PlannerInput = {
     city: body.city.trim(),
     date: body.date,
+    endDate: body.endDate || body.date,
     timeStart: body.timeStart,
     timeEnd: body.timeEnd,
     budget: body.budget,
@@ -64,7 +73,8 @@ export async function POST(request: Request) {
 
     const generationId = await rec.flush({
       input,
-      stopCount: itinerary.stops.length,
+      stopCount: itinerary.days.reduce((n, d) => n + d.stops.length, 0),
+      dayCount: itinerary.days.length,
       refined: Boolean(body.refinement),
       ok: true,
     });

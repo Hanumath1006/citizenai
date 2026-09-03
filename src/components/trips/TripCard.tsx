@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { MapPin, Users } from "lucide-react";
-import { format } from "date-fns";
 import type { TripSummary } from "@/lib/trips";
 import { BUDGET_LABELS, TRANSPORT_LABELS } from "@/lib/types";
 import type { Budget, Transport } from "@/lib/types";
-import { titleCase } from "@/lib/utils";
+import { titleCase, dateRangeLabel } from "@/lib/utils";
 import { Tag } from "@/components/ui/primitives";
 import { TripDoneToggle } from "@/components/trips/CompleteTripButton";
 
@@ -53,7 +52,8 @@ export function TripCard({ trip }: { trip: TripSummary }) {
 
       <div className="p-5">
         <p className="text-xs font-medium text-faint">
-          {trip.city} · {format(new Date(trip.date), "MMM d, yyyy")}
+          {trip.city} · {dateRangeLabel(trip.date, trip.endDate)}
+          {trip.dayCount > 1 && ` · ${trip.dayCount} days`}
         </p>
         <h3 className="mt-1 line-clamp-1 text-base font-semibold">
           {trip.title}

@@ -25,12 +25,14 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
-  if (!itinerary?.stops?.length) {
+  if (!itinerary?.days?.length) {
     return NextResponse.json({ error: "Nothing to save." }, { status: 400 });
   }
 
   const { input } = itinerary;
-  const isPast = new Date(input.date) < new Date(new Date().toDateString());
+  const endDate = input.endDate || input.date;
+  // A trip counts as done once its *last* day is behind us, not its first.
+  const isPast = new Date(endDate) < new Date(new Date().toDateString());
 
   const { data: trip, error: tripErr } = await supabase
     .from("trips")
@@ -40,6 +42,7 @@ export async function POST(request: Request) {
       summary: itinerary.summary,
       city: input.city,
       trip_date: input.date,
+      end_date: endDate,
       time_start: input.timeStart,
       time_end: input.timeEnd,
       budget: input.budget,
@@ -59,27 +62,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not save trip." }, { status: 500 });
   }
 
-  const stops = itinerary.stops.map((s) => ({
-    trip_id: trip.id,
-    ord: s.order,
-    name: s.name,
-    category: s.category,
-    description: s.description,
-    arrive_time: s.arriveTime,
-    duration_min: s.durationMin,
-    cost_low: s.costLow,
-    cost_high: s.costHigh,
-    is_indoor: s.isIndoor,
-    travel_to_next_min: s.travelToNextMin,
-    travel_mode: s.travelMode,
-    place_id: s.placeId,
-    address: s.address,
-    lat: s.lat,
-    lng: s.lng,
-    rating: s.rating,
-    photo_url: s.photoUrl,
-    maps_url: s.mapsUrl,
-  }));
+  // Flattened across days; `ord` stays the order within its day, and
+  // day_index is what separates them.
+  const stops = itinerary.days.flatMap((day) =>
+    day.stops.map((s) => ({
+      trip_id: trip.id,
+      ord: s.order,
+      day_index: day.dayIndex,
+      name: s.name,
+      category: s.category,
+      description: s.description,
+      arrive_time: s.arriveTime,
+      duration_min: s.durationMin,
+      cost_low: s.costLow,
+      cost_high: s.costHigh,
+      is_indoor: s.isIndoor,
+      travel_to_next_min: s.travelToNextMin,
+      travel_mode: s.travelMode,
+      place_id: s.placeId,
+      address: s.address,
+      lat: s.lat,
+      lng: s.lng,
+      rating: s.rating,
+      photo_url: s.photoUrl,
+      maps_url: s.mapsUrl,
+    }))
+  );
 
   const { error: stopsErr } = await supabase.from("stops").insert(stops);
   if (stopsErr) {

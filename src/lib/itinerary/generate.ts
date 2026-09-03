@@ -1,6 +1,13 @@
-import type { Itinerary, ItineraryStop, PlannerInput } from "@/lib/types";
+import type {
+  Itinerary,
+  ItineraryDay,
+  ItineraryStop,
+  PlannerInput,
+  WeatherSummary,
+} from "@/lib/types";
+import { tripDates } from "@/lib/types";
 import type { OpeningPeriod } from "@/lib/google/places";
-import { getForecast } from "@/lib/weather";
+import { getForecastRange } from "@/lib/weather";
 import { findPlace, photoProxyUrl } from "@/lib/google/places";
 import { travelMinutes, travelMatrix } from "@/lib/google/routes";
 import { bestOrder } from "@/lib/itinerary/optimize";
@@ -26,7 +33,7 @@ function diffHours(start: string, end: string) {
 function addMinutes(hhmm: string, mins: number): string {
   const [h, m] = hhmm.split(":").map(Number);
   let total = h * 60 + m + Math.max(0, Math.round(mins));
-  total = Math.min(total, 23 * 60 + 59);
+  total = Math.min(total, DAY_END_MIN);
   const nh = Math.floor(total / 60);
   const nm = total % 60;
   return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
@@ -65,72 +72,35 @@ function applyOptimizedOrder(
 }
 
 /**
- * Full generation pipeline:
- *   Gemini plans the shape → Google Places supplies real venues/photos →
- *   Google Routes fills travel times → OpenWeather adds the forecast.
- * Each external step degrades gracefully to the model's own estimates.
+ * Route-optimize and hours-validate a single day.
+ *
+ * Optimization is scoped to one day on purpose: reordering across days would
+ * shuffle stops between dates, which breaks both the day themes the model
+ * chose and any venue whose opening hours differ by weekday.
  */
-export async function generateItinerary(
+async function buildDay(
+  args: {
+    dayIndex: number;
+    date: string;
+    theme: string;
+    stops: ItineraryStop[];
+    periods: (OpeningPeriod[] | null)[];
+    weather: WeatherSummary;
+  },
   input: PlannerInput,
-  opts?: {
-    refinement?: string;
-    previous?: PlannedItinerary;
-    rec?: CallRecorder;
-  }
-): Promise<{ itinerary: Itinerary; plan: PlannedItinerary }> {
-  const rec = opts?.rec;
-  const weather = await getForecast(input.city, input.date, rec);
-  const plan = await planItinerary(input, weather, opts);
+  rec?: CallRecorder
+): Promise<ItineraryDay> {
+  const { dayIndex, date, theme, stops: enriched, periods, weather } = args;
 
-  // Weekday of the trip (0=Sunday … 6=Saturday), used for hours lookups.
-  const weekday = new Date(`${input.date}T12:00:00`).getDay();
+  // Weekday of this specific day (0=Sunday … 6=Saturday), for hours lookups.
+  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
 
-  // Enrich each stop with real venue data + opening hours (in parallel).
-  const enrichedRaw = await Promise.all(
-    plan.stops.map(async (s, i) => {
-      const match = await findPlace(s.name, input.city, rec);
-      const stop: ItineraryStop = {
-        order: i + 1,
-        name: match?.name ?? s.name,
-        category: s.category,
-        description: s.description,
-        arriveTime: s.arriveTime,
-        durationMin: s.durationMin,
-        costLow: s.costLow,
-        costHigh: s.costHigh,
-        isIndoor: s.isIndoor,
-        travelToNextMin: s.travelToNextMin,
-        travelMode: input.transport,
-        placeId: match?.placeId ?? null,
-        address: match?.address ?? null,
-        lat: match?.lat ?? null,
-        lng: match?.lng ?? null,
-        rating: match?.rating ?? null,
-        photoUrl: photoProxyUrl(match?.photoName ?? null),
-        mapsUrl:
-          match?.mapsUrl ??
-          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-            `${s.name} ${input.city}`
-          )}`,
-        hoursNote: dayHoursText(match?.weekdayText ?? null, weekday),
-        openAtArrival: null,
-      };
-      return { stop, periods: match?.openingPeriods ?? null };
-    })
-  );
-
-  const enriched = enrichedRaw.map((e) => e.stop);
-  const periodsByIndex = enrichedRaw.map((e) => e.periods);
   const periodsByStop = new Map<ItineraryStop, OpeningPeriod[] | null>();
-  enrichedRaw.forEach((e) => periodsByStop.set(e.stop, e.periods));
+  enriched.forEach((s, i) => periodsByStop.set(s, periods[i]));
 
-  // Route-optimize the sequence when every stop has coordinates and the
-  // transport mode supports a travel-time matrix (walking/driving/uber).
-  // Candidate orders must keep every venue OPEN at arrival and within its
-  // intended time-of-day slot, so optimization never breaks the day's arc.
   let stops = enriched;
   let optimized = false;
-  let totalTravelMin: number | undefined;
+  let dayTravelMin: number | undefined;
 
   const coords = enriched.map((s) =>
     s.lat != null && s.lng != null ? { lat: s.lat, lng: s.lng } : null
@@ -172,7 +142,7 @@ export async function generateItinerary(
             return false;
           }
           // Never schedule a stop while the venue is closed.
-          if (isOpenAt(periodsByIndex[idx], weekday, arr[k]) === false) {
+          if (isOpenAt(periods[idx], weekday, arr[k]) === false) {
             return false;
           }
         }
@@ -183,7 +153,7 @@ export async function generateItinerary(
       if (valid) {
         const result = applyOptimizedOrder(enriched, order, matrix);
         stops = result.stops;
-        totalTravelMin = result.totalTravel;
+        dayTravelMin = result.totalTravel;
         optimized = true;
       } else {
         // No reorder respects both timing and hours — keep the planner's
@@ -193,7 +163,7 @@ export async function generateItinerary(
           if (Number.isFinite(leg)) enriched[i].travelToNextMin = leg;
         }
         enriched[enriched.length - 1].travelToNextMin = 0;
-        totalTravelMin = enriched.reduce(
+        dayTravelMin = enriched.reduce(
           (sum, s) => sum + (s.travelToNextMin ?? 0),
           0
         );
@@ -203,7 +173,7 @@ export async function generateItinerary(
 
   // Fallback (transit, missing coords, or matrix unavailable): keep the AI's
   // order and fill consecutive travel times with per-leg Routes calls.
-  if (!optimized && totalTravelMin === undefined) {
+  if (!optimized && dayTravelMin === undefined) {
     for (let i = 0; i < stops.length - 1; i++) {
       const a = stops[i];
       const b = stops[i + 1];
@@ -218,10 +188,7 @@ export async function generateItinerary(
       }
     }
     if (stops.length) stops[stops.length - 1].travelToNextMin = 0;
-    totalTravelMin = stops.reduce(
-      (sum, s) => sum + (s.travelToNextMin ?? 0),
-      0
-    );
+    dayTravelMin = stops.reduce((sum, s) => sum + (s.travelToNextMin ?? 0), 0);
   }
 
   // Validate final arrival times against real opening hours and flag closures.
@@ -236,17 +203,135 @@ export async function generateItinerary(
   const costLow = stops.reduce((sum, s) => sum + (s.costLow ?? 0), 0);
   const costHigh = stops.reduce((sum, s) => sum + (s.costHigh ?? 0), 0);
 
+  return {
+    dayIndex,
+    date,
+    theme,
+    stops,
+    estCostLow: costLow || null,
+    estCostHigh: costHigh || null,
+    weather,
+    optimized,
+    totalTravelMin: dayTravelMin,
+  };
+}
+
+/**
+ * Full generation pipeline:
+ *   Gemini plans the shape → Google Places supplies real venues/photos →
+ *   Google Routes fills travel times → OpenWeather adds the forecast.
+ * Each external step degrades gracefully to the model's own estimates.
+ *
+ * Cost scales with the number of days, so the expensive parts are batched
+ * wherever the APIs allow it: one weather request covers the whole range,
+ * one Gemini call plans every day, and Places lookups for all days fan out
+ * in a single parallel pass rather than day by day.
+ */
+export async function generateItinerary(
+  input: PlannerInput,
+  opts?: {
+    refinement?: string;
+    previous?: PlannedItinerary;
+    rec?: CallRecorder;
+  }
+): Promise<{ itinerary: Itinerary; plan: PlannedItinerary }> {
+  const rec = opts?.rec;
+  const dates = tripDates(input.date, input.endDate);
+
+  const weatherByDate = await getForecastRange(input.city, dates, rec);
+  const plan = await planItinerary(input, weatherByDate, opts);
+
+  // Enrich every stop across every day in one parallel pass. Doing this per
+  // day would serialise the Places lookups behind each day's route matrix.
+  const flat = plan.days.flatMap((day, dayIdx) =>
+    day.stops.map((stop, stopIdx) => ({ day, dayIdx, stop, stopIdx }))
+  );
+
+  const enrichedFlat = await Promise.all(
+    flat.map(async ({ dayIdx, stop: s, stopIdx }) => {
+      const match = await findPlace(s.name, input.city, rec);
+      const weekday = new Date(`${dates[dayIdx]}T12:00:00Z`).getUTCDay();
+
+      const stop: ItineraryStop = {
+        order: stopIdx + 1,
+        name: match?.name ?? s.name,
+        category: s.category,
+        description: s.description,
+        arriveTime: s.arriveTime,
+        durationMin: s.durationMin,
+        costLow: s.costLow,
+        costHigh: s.costHigh,
+        isIndoor: s.isIndoor,
+        travelToNextMin: s.travelToNextMin,
+        travelMode: input.transport,
+        placeId: match?.placeId ?? null,
+        address: match?.address ?? null,
+        lat: match?.lat ?? null,
+        lng: match?.lng ?? null,
+        rating: match?.rating ?? null,
+        photoUrl: photoProxyUrl(match?.photoName ?? null),
+        mapsUrl:
+          match?.mapsUrl ??
+          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            `${s.name} ${input.city}`
+          )}`,
+        hoursNote: dayHoursText(match?.weekdayText ?? null, weekday),
+        openAtArrival: null,
+      };
+      return { dayIdx, stop, periods: match?.openingPeriods ?? null };
+    })
+  );
+
+  // Regroup the flattened results back into days.
+  const byDay = plan.days.map(() => ({
+    stops: [] as ItineraryStop[],
+    periods: [] as (OpeningPeriod[] | null)[],
+  }));
+  for (const e of enrichedFlat) {
+    byDay[e.dayIdx].stops.push(e.stop);
+    byDay[e.dayIdx].periods.push(e.periods);
+  }
+
+  // Each day's route matrix is independent, so run them concurrently.
+  const days = await Promise.all(
+    plan.days.map((day, i) =>
+      buildDay(
+        {
+          dayIndex: i + 1,
+          date: dates[i],
+          theme: day.theme,
+          stops: byDay[i].stops,
+          periods: byDay[i].periods,
+          weather: weatherByDate[dates[i]] ?? {
+            tempF: null,
+            condition: null,
+            icon: null,
+            isAvailable: false,
+          },
+        },
+        input,
+        rec
+      )
+    )
+  );
+
+  const estCostLow = days.reduce((sum, d) => sum + (d.estCostLow ?? 0), 0);
+  const estCostHigh = days.reduce((sum, d) => sum + (d.estCostHigh ?? 0), 0);
+
   const itinerary: Itinerary = {
     title: plan.title,
     summary: plan.summary,
     input,
-    stops,
-    estCostLow: costLow || null,
-    estCostHigh: costHigh || null,
+    days,
+    estCostLow: estCostLow || null,
+    estCostHigh: estCostHigh || null,
     durationHours: diffHours(input.timeStart, input.timeEnd),
-    weather,
-    optimized,
-    totalTravelMin,
+    weather: days[0]?.weather ?? {
+      tempF: null,
+      condition: null,
+      icon: null,
+      isAvailable: false,
+    },
   };
 
   return { itinerary, plan };

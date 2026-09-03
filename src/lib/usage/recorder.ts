@@ -16,6 +16,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { PRICING, geminiCost, type Provider } from "@/lib/usage/pricing";
 import type { CallRecorder } from "@/lib/usage/types";
 import type { PlannerInput } from "@/lib/types";
+import { tripDayCount } from "@/lib/types";
 
 export interface ApiEventDraft {
   provider: Provider;
@@ -124,6 +125,8 @@ export class UsageRecorder implements CallRecorder {
   async flush(meta: {
     input: PlannerInput;
     stopCount?: number;
+    /** Days planned. The biggest single driver of what a generation costs. */
+    dayCount?: number;
     refined?: boolean;
     ok: boolean;
     error?: string;
@@ -139,6 +142,10 @@ export class UsageRecorder implements CallRecorder {
           user_id: this.userId,
           city: meta.input.city,
           trip_date: meta.input.date,
+          end_date: meta.input.endDate || meta.input.date,
+          day_count:
+            meta.dayCount ??
+            tripDayCount(meta.input.date, meta.input.endDate || meta.input.date),
           budget: meta.input.budget,
           travel_style: meta.input.travelStyle,
           transport: meta.input.transport,

@@ -35,6 +35,8 @@ export interface GenerationRow {
   trip_id: string | null;
   city: string;
   trip_date: string | null;
+  end_date: string | null;
+  day_count: number;
   budget: Budget | null;
   travel_style: TravelStyle | null;
   transport: Transport | null;
@@ -84,6 +86,8 @@ export interface TripRow {
   summary: string | null;
   city: string;
   trip_date: string;
+  /** Last day of the trip, inclusive. Equals trip_date for a single day. */
+  end_date: string | null;
   time_start: string;
   time_end: string;
   budget: Budget;
@@ -101,7 +105,10 @@ export interface TripRow {
 export interface StopRow {
   id: string;
   trip_id: string;
+  /** Order within the day, not across the whole trip. */
   ord: number;
+  /** 1-based day of the trip this stop belongs to. */
+  day_index: number;
   name: string;
   category: string | null;
   description: string | null;

@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Clock, Wallet } from "lucide-react";
-import { format } from "date-fns";
+import { ArrowLeft, MapPin, Clock, Wallet, CalendarDays } from "lucide-react";
 import { getTrip } from "@/lib/trips";
-import { formatCostRange, formatDuration, titleCase } from "@/lib/utils";
-import { StopCard } from "@/components/itinerary/StopCard";
+import {
+  formatCostRange,
+  formatDuration,
+  titleCase,
+  dateRangeLabel,
+} from "@/lib/utils";
+import { DayItinerary, DayNav } from "@/components/itinerary/DayItinerary";
 import { WeatherBadge } from "@/components/itinerary/WeatherBadge";
 import { DeleteTripButton } from "@/components/trips/DeleteTripButton";
 import { CompleteTripButton } from "@/components/trips/CompleteTripButton";
@@ -17,6 +21,9 @@ export default async function TripDetailPage({
   const { id } = await params;
   const it = await getTrip(id);
   if (!it) notFound();
+
+  const multiDay = it.days.length > 1;
+  const stopCount = it.days.reduce((n, d) => n + d.stops.length, 0);
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8">
@@ -32,9 +39,9 @@ export default async function TripDetailPage({
 
       <div className="flex flex-wrap items-center gap-3 text-sm text-faint">
         <span className="uppercase tracking-wide">
-          {it.input.city} · {format(new Date(it.input.date), "MMM d, yyyy")}
+          {it.input.city} · {dateRangeLabel(it.input.date, it.input.endDate)}
         </span>
-        <WeatherBadge weather={it.weather} />
+        {!multiDay && <WeatherBadge weather={it.weather} />}
         <span className="rounded-[var(--radius-pill)] bg-line-soft px-3 py-1 text-xs font-medium text-ink-soft">
           {titleCase(it.status ?? "upcoming")}
         </span>
@@ -45,27 +52,42 @@ export default async function TripDetailPage({
       </h1>
       <p className="mt-2 text-muted">{it.summary}</p>
 
-      <div className="mt-6 grid grid-cols-3 gap-3">
-        <Stat icon={MapPin} label="Stops" value={String(it.stops.length)} />
+      <div
+        className={`mt-6 grid gap-3 ${multiDay ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}
+      >
+        {multiDay && (
+          <Stat
+            icon={CalendarDays}
+            label="Days"
+            value={String(it.days.length)}
+          />
+        )}
+        <Stat icon={MapPin} label="Stops" value={String(stopCount)} />
         <Stat
           icon={Clock}
-          label="Duration"
+          label={multiDay ? "Hours/day" : "Duration"}
           value={formatDuration(it.durationHours * 60)}
         />
         <Stat
           icon={Wallet}
-          label="Est. cost"
+          label={multiDay ? "Est. total" : "Est. cost"}
           value={formatCostRange(it.estCostLow, it.estCostHigh)}
         />
       </div>
 
-      <div className="mt-8">
-        {it.stops.map((stop, i) => (
-          <StopCard
-            key={`${stop.order}-${stop.name}`}
-            stop={stop}
-            isLast={i === it.stops.length - 1}
+      {multiDay && (
+        <div className="mt-6">
+          <DayNav days={it.days} />
+        </div>
+      )}
+
+      <div className="mt-8 space-y-10">
+        {it.days.map((day) => (
+          <DayItinerary
+            key={day.dayIndex}
+            day={day}
             city={it.input.city}
+            showHeader={multiDay}
           />
         ))}
       </div>
