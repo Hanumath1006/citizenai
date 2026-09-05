@@ -124,7 +124,12 @@ export function ResultClient() {
   }
 
   async function save() {
-    if (!result) return;
+    // Never fail silently here. A click that does nothing, with no message
+    // and no network request, is indistinguishable from a broken button.
+    if (!result?.itinerary?.days?.length) {
+      setError("This itinerary is no longer loaded — generate it again.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
