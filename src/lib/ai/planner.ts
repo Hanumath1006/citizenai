@@ -30,8 +30,70 @@ export interface PlannedItinerary {
 }
 
 const MODEL = () => process.env.GEMINI_MODEL || "gemini-3.6-flash";
+/**
+ * Optional second model to fall back to when the primary is overloaded.
+ * Unset by default — a fallback only helps if it is a model this project
+ * actually has access to, so it is opt-in rather than a guess.
+ */
+const FALLBACK_MODEL = () => process.env.GEMINI_FALLBACK_MODEL || "";
 const ENDPOINT = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+/* ──────────────────────────────────────────────────────────────
+   Retry policy for transient Gemini failures.
+
+   Google returns 503 when a model is momentarily oversubscribed — the
+   error text literally says spikes "are usually temporary". Without a
+   retry a single blip becomes a failed itinerary for the user, and that
+   was the single largest source of generation failures in production.
+
+   Retries are bounded by a wall-clock deadline rather than a fixed count,
+   because this runs in a serverless function with a hard 60s ceiling and a
+   successful call already takes 13s on average. Burning the budget on a
+   third attempt only to be killed mid-flight would turn a recoverable
+   error into a worse one.
+   ────────────────────────────────────────────────────────────── */
+
+/** Statuses worth retrying: overload, rate limit, and gateway blips. */
+const TRANSIENT_STATUS = new Set([429, 500, 502, 503, 504]);
+
+const MAX_ATTEMPTS = 3;
+
+/**
+ * Wall-clock allowance for the whole generation, sized against the route's
+ * maxDuration of 60s with headroom for the response itself.
+ */
+const TOTAL_BUDGET_MS = 52_000;
+
+/**
+ * Held back for Places enrichment and route matrices after the model
+ * returns. Measured from production: that work averages 1.3s and has peaked
+ * at 10.4s, so 11s covers the observed worst case.
+ */
+const DOWNSTREAM_RESERVE_MS = 11_000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Exponential backoff with jitter, so concurrent users don't retry in lockstep. */
+function backoffMs(attempt: number): number {
+  const base = 800 * 2 ** (attempt - 1); // 800ms, 1.6s
+  return Math.round(base + Math.random() * 600);
+}
+
+/** Honour a Retry-After header when the API sends one. */
+function retryAfterMs(res: Response): number | null {
+  const header = res.headers.get("retry-after");
+  if (!header) return null;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds)) return Math.min(seconds * 1000, 10_000);
+  const when = Date.parse(header);
+  return Number.isNaN(when) ? null : Math.min(Math.max(when - Date.now(), 0), 10_000);
+}
+
+/** Conservative estimate of how long one more attempt will take. */
+function attemptEstimateMs(dayCount: number): number {
+  return 15_000 + dayCount * 2_500;
+}
 
 /**
  * Gemini structured-output schema (OpenAPI subset). Constrains the response
@@ -246,66 +308,109 @@ export async function planItinerary(
   // the title, summary and the model's own reasoning.
   const maxOutputTokens = Math.min(32768, 6144 + dayCount * 2500);
 
-  const res = await fetch(ENDPOINT(MODEL()), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey,
-    },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt(dayCount) }] },
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: userPrompt(
-                input,
-                weatherByDate,
-                opts?.refinement,
-                opts?.previous
-              ),
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
-        maxOutputTokens,
-        temperature: 1,
+  const requestBody = JSON.stringify({
+    system_instruction: { parts: [{ text: systemPrompt(dayCount) }] },
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: userPrompt(
+              input,
+              weatherByDate,
+              opts?.refinement,
+              opts?.previous
+            ),
+          },
+        ],
       },
-    }),
+    ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: RESPONSE_SCHEMA,
+      maxOutputTokens,
+      temperature: 1,
+    },
   });
 
-  if (!res.ok) {
+  const deadline = startedAt + TOTAL_BUDGET_MS;
+  const fallback = FALLBACK_MODEL();
+  let data: GeminiResponse | null = null;
+  let lastStatus = 0;
+  let lastDetail = "";
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    // Later attempts switch to the fallback model when one is configured:
+    // if the primary is oversubscribed, asking it again is the least
+    // promising thing we can do.
+    const model = attempt > 1 && fallback ? fallback : MODEL();
+    const attemptStart = Date.now();
+
+    const res = await fetch(ENDPOINT(model), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: requestBody,
+    });
+
+    // Every attempt is recorded, so the admin dashboard keeps showing the
+    // true call volume and failure rate rather than only the final outcome.
+    if (res.ok) {
+      data = (await res.json()) as GeminiResponse;
+      const usage = data.usageMetadata;
+      opts?.rec?.recordGemini({
+        operation,
+        tokensIn: usage?.promptTokenCount ?? 0,
+        tokensOut:
+          (usage?.candidatesTokenCount ?? 0) + (usage?.thoughtsTokenCount ?? 0),
+        latencyMs: Date.now() - attemptStart,
+        ok: true,
+        statusCode: res.status,
+      });
+      break;
+    }
+
     opts?.rec?.recordGemini({
       operation,
       tokensIn: 0,
       tokensOut: 0,
-      latencyMs: Date.now() - startedAt,
+      latencyMs: Date.now() - attemptStart,
       ok: false,
       statusCode: res.status,
     });
-    const body = (await res.json().catch(() => ({}))) as GeminiResponse;
-    const detail = body?.error?.message ?? `HTTP ${res.status}`;
-    throw new Error(`Gemini request failed: ${detail}`);
+
+    const errBody = (await res.json().catch(() => ({}))) as GeminiResponse;
+    lastStatus = res.status;
+    lastDetail = errBody?.error?.message ?? `HTTP ${res.status}`;
+
+    // A bad key, a bad model name or a malformed request will fail the same
+    // way every time — retrying just wastes the user's remaining budget.
+    if (!TRANSIENT_STATUS.has(res.status)) break;
+    if (attempt === MAX_ATTEMPTS) break;
+
+    // Only retry if there is genuinely room for another full attempt plus
+    // the enrichment that still has to happen afterwards.
+    const wait = retryAfterMs(res) ?? backoffMs(attempt);
+    const projectedEnd =
+      Date.now() + wait + attemptEstimateMs(dayCount) + DOWNSTREAM_RESERVE_MS;
+    if (projectedEnd > deadline) break;
+
+    console.warn(
+      `[planner] ${model} returned ${res.status}; retrying in ${wait}ms (attempt ${attempt + 1}/${MAX_ATTEMPTS})`
+    );
+    await sleep(wait);
   }
 
-  const data = (await res.json()) as GeminiResponse;
-
-  // Reasoning tokens are billed at the output rate, so they belong in
-  // tokensOut — leaving them out understates AI spend on thinking models.
-  const usage = data.usageMetadata;
-  opts?.rec?.recordGemini({
-    operation,
-    tokensIn: usage?.promptTokenCount ?? 0,
-    tokensOut:
-      (usage?.candidatesTokenCount ?? 0) + (usage?.thoughtsTokenCount ?? 0),
-    latencyMs: Date.now() - startedAt,
-    ok: true,
-    statusCode: res.status,
-  });
+  if (!data) {
+    if (TRANSIENT_STATUS.has(lastStatus)) {
+      throw new Error(
+        "The planner is busy right now — that's usually a brief spike. Try again in a moment."
+      );
+    }
+    throw new Error(`Gemini request failed: ${lastDetail}`);
+  }
 
   if (data.promptFeedback?.blockReason) {
     throw new Error(
