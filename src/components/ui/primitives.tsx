@@ -34,7 +34,7 @@ export function Pill({
         "rounded-[var(--radius-pill)] px-4 h-9 text-sm font-medium border transition-all duration-200",
         active
           ? "bg-ink text-white border-ink"
-          : "bg-white text-ink-soft border-line hover:border-ink/30",
+          : "bg-surface-raised text-ink-soft border-line hover:border-ink/30",
         className
       )}
       {...props}
@@ -100,7 +100,7 @@ export const Input = React.forwardRef<
     <input
       ref={ref}
       className={cn(
-        "w-full h-11 rounded-xl border border-line bg-white px-3.5 text-sm text-ink placeholder:text-faint",
+        "w-full h-11 rounded-xl border border-line bg-surface-raised px-3.5 text-sm text-ink placeholder:text-faint",
         "focus:outline-none focus:border-ink/40 focus:ring-4 focus:ring-ink/5 transition",
         className
       )}
@@ -119,7 +119,7 @@ export const Select = React.forwardRef<
       <select
         ref={ref}
         className={cn(
-          "w-full h-11 appearance-none rounded-xl border border-line bg-white px-3.5 pr-9 text-sm text-ink",
+          "w-full h-11 appearance-none rounded-xl border border-line bg-surface-raised px-3.5 pr-9 text-sm text-ink",
           "focus:outline-none focus:border-ink/40 focus:ring-4 focus:ring-ink/5 transition cursor-pointer",
           className
         )}

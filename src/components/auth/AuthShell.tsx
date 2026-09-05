@@ -20,7 +20,7 @@ export function AuthShell({
       <div className="flex flex-col justify-between p-8 sm:p-12">
         <Logo />
         <div className="mx-auto w-full max-w-sm py-12">
-          <span className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-line bg-white px-3 py-1 text-xs font-medium text-muted">
+          <span className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-line bg-surface-raised px-3 py-1 text-xs font-medium text-muted">
             ✦ Your AI city companion
           </span>
           <h1 className="mt-5 text-3xl font-semibold tracking-tight">{title}</h1>

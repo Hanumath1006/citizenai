@@ -14,7 +14,7 @@ export function WeatherBadge({ weather }: { weather: WeatherSummary }) {
   if (!weather.isAvailable) return null;
   const Icon = iconFor(weather.condition);
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-line bg-white px-3 py-1.5 text-sm text-ink-soft">
+    <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-line bg-surface-raised px-3 py-1.5 text-sm text-ink-soft">
       <Icon className="h-4 w-4 text-accent" />
       {weather.condition}
       {weather.tempF != null && (

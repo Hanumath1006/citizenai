@@ -11,7 +11,7 @@ export default function AccountDisabledPage() {
       subtitle="This CitizenAI account has been turned off by an administrator."
     >
       <div className="mt-8 space-y-6">
-        <div className="flex items-start gap-3 rounded-xl border border-line bg-white px-4 py-4 text-sm">
+        <div className="flex items-start gap-3 rounded-xl border border-line bg-surface-raised px-4 py-4 text-sm">
           <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
           <div className="text-muted">
             <p className="font-medium text-ink">Your data is still here</p>

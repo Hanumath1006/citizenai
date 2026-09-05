@@ -82,7 +82,7 @@ export function TripDoneToggle({
       className={cn(
         "group/done relative z-20 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 text-xs font-medium transition-all disabled:opacity-60",
         done
-          ? "border-line bg-white text-muted hover:border-ink/30 hover:text-ink"
+          ? "border-line bg-surface-raised text-muted hover:border-ink/30 hover:text-ink"
           : "border-ink bg-ink text-white hover:bg-ink-soft",
         error && "border-red-300 text-red-600",
         className
@@ -152,7 +152,7 @@ export function CompleteTripButton({
           <button
             onClick={() => setStatus("upcoming")}
             disabled={busy}
-            className="group inline-flex h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-emerald-200 bg-white px-4 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-100 disabled:opacity-60"
+            className="group inline-flex h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-emerald-200 bg-surface-raised px-4 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-100 disabled:opacity-60"
           >
             {busy ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -165,7 +165,7 @@ export function CompleteTripButton({
           <button
             onClick={() => setStatus("completed")}
             disabled={busy}
-            className="group inline-flex h-11 items-center gap-2 rounded-[var(--radius-pill)] bg-ink px-5 text-sm font-medium text-white shadow-[0_4px_16px_rgba(13,13,15,0.18)] transition-all hover:bg-ink-soft disabled:opacity-60"
+            className="group inline-flex h-11 items-center gap-2 rounded-[var(--radius-pill)] bg-ink px-5 text-sm font-medium text-white shadow-[var(--shadow-raise)] transition-all hover:bg-ink-soft disabled:opacity-60"
           >
             {busy ? (
               <Loader2 className="h-4 w-4 animate-spin" />

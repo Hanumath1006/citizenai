@@ -44,7 +44,7 @@ export function RefinementBar({
           onChange={(e) => setText(e.target.value)}
           placeholder="Or tell the AI exactly what to change…"
           disabled={busy}
-          className="h-11 flex-1 rounded-xl border border-line bg-white px-3.5 text-sm placeholder:text-faint focus:border-ink/40 focus:outline-none focus:ring-4 focus:ring-ink/5 disabled:opacity-60"
+          className="h-11 flex-1 rounded-xl border border-line bg-surface-raised px-3.5 text-sm placeholder:text-faint focus:border-ink/40 focus:outline-none focus:ring-4 focus:ring-ink/5 disabled:opacity-60"
         />
         <button
           type="submit"

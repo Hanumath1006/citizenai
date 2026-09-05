@@ -22,7 +22,7 @@ export default async function VerifyEmailPage({
       }
     >
       <div className="mt-8 space-y-6">
-        <div className="flex items-start gap-3 rounded-xl border border-line bg-white px-4 py-4 text-sm">
+        <div className="flex items-start gap-3 rounded-xl border border-line bg-surface-raised px-4 py-4 text-sm">
           <Mail className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
           <div className="text-muted">
             <p className="font-medium text-ink">One more step</p>

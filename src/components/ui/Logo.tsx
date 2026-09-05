@@ -5,15 +5,23 @@ import { cn } from "@/lib/utils";
 export function Logo({
   href = "/",
   showTagline = false,
+  onDark = false,
   className,
 }: {
   href?: string;
   showTagline?: boolean;
+  /** Reverse the mark out of a coloured surface, e.g. the sandy sidebar. */
+  onDark?: boolean;
   className?: string;
 }) {
   return (
     <Link href={href} className={cn("flex items-center gap-2.5", className)}>
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-ink text-white">
+      <span
+        className={cn(
+          "grid h-9 w-9 place-items-center rounded-xl",
+          onDark ? "bg-white text-accent" : "bg-ink text-white"
+        )}
+      >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
           <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
           <path
@@ -23,11 +31,21 @@ export function Logo({
         </svg>
       </span>
       <span className="leading-tight">
-        <span className="block text-[0.95rem] font-semibold tracking-tight text-ink">
+        <span
+          className={cn(
+            "block text-[0.95rem] font-semibold tracking-tight",
+            onDark ? "text-white" : "text-ink"
+          )}
+        >
           CitizenAI
         </span>
         {showTagline && (
-          <span className="block text-[0.7rem] text-faint">
+          <span
+            className={cn(
+              "block text-[0.7rem]",
+              onDark ? "text-white/80" : "text-faint"
+            )}
+          >
             Your AI city companion
           </span>
         )}

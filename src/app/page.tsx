@@ -76,7 +76,7 @@ export default async function Home() {
       <section className="mx-auto max-w-6xl px-5 pt-12 pb-20 lg:pt-20">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="animate-fade-up">
-            <span className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-line bg-white px-3.5 py-1.5 text-xs font-medium text-muted">
+            <span className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-line bg-surface-raised px-3.5 py-1.5 text-xs font-medium text-muted">
               <Sparkles className="h-3.5 w-3.5 text-accent" />
               Your AI city companion
             </span>
