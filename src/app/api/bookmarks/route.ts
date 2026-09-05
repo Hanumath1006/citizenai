@@ -19,6 +19,43 @@ interface AddBody {
   };
 }
 
+/**
+ * The place ids already bookmarked, so the itinerary can render its hearts
+ * in the right state. Without this the controls always start empty and a
+ * place you favourited yesterday looks un-favourited today.
+ */
+export async function GET(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const kind = searchParams.get("kind") as Kind | null;
+  const table = kind ? TABLES[kind] : null;
+  if (!table) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .from(table)
+    .select("place_id")
+    .eq("user_id", user.id)
+    .not("place_id", "is", null);
+
+  if (error) {
+    console.error("Bookmark read failed:", error);
+    return NextResponse.json({ error: "Could not load." }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    placeIds: (data ?? []).map((r) => r.place_id).filter(Boolean),
+  });
+}
+
 /** Add a favorite or saved place. */
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -62,7 +99,13 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-/** Remove a favorite or saved place by row id. */
+/**
+ * Remove a favorite or saved place, by row id or by place id.
+ *
+ * The row id is what the Favorites and Saved Places lists know; an
+ * itinerary only knows the Google place id, which is what makes the heart
+ * on a stop a real toggle rather than an add-only button.
+ */
 export async function DELETE(request: Request) {
   const supabase = await createClient();
   const {
@@ -75,18 +118,19 @@ export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const kind = searchParams.get("kind") as Kind | null;
   const id = searchParams.get("id");
+  const placeId = searchParams.get("placeId");
   const table = kind ? TABLES[kind] : null;
-  if (!table || !id) {
+  if (!table || (!id && !placeId)) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const { error } = await supabase
-    .from(table)
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
+  const query = supabase.from(table).delete().eq("user_id", user.id);
+  const { error } = await (id
+    ? query.eq("id", id)
+    : query.eq("place_id", placeId!));
 
   if (error) {
+    console.error("Bookmark remove failed:", error);
     return NextResponse.json({ error: "Could not remove." }, { status: 500 });
   }
   return NextResponse.json({ ok: true });

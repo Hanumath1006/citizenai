@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Clock, Wallet, CalendarDays } from "lucide-react";
 import { getTrip } from "@/lib/trips";
+import { getBookmarkedPlaceIds } from "@/lib/bookmarks";
 import {
   formatCostRange,
   formatDuration,
@@ -21,6 +22,13 @@ export default async function TripDetailPage({
   const { id } = await params;
   const it = await getTrip(id);
   if (!it) notFound();
+
+  // Read on the server so the hearts render in their true state on first
+  // paint, with no flash of "not favourited".
+  const [favoritedPlaceIds, savedPlaceIds] = await Promise.all([
+    getBookmarkedPlaceIds("favorites"),
+    getBookmarkedPlaceIds("saved_places"),
+  ]);
 
   const multiDay = it.days.length > 1;
   const stopCount = it.days.reduce((n, d) => n + d.stops.length, 0);
@@ -88,6 +96,8 @@ export default async function TripDetailPage({
             day={day}
             city={it.input.city}
             showHeader={multiDay}
+            favoritedPlaceIds={favoritedPlaceIds}
+            savedPlaceIds={savedPlaceIds}
           />
         ))}
       </div>

@@ -44,6 +44,10 @@ export function ResultClient() {
   const [saved, setSaved] = useState<string | null>(null);
   const inputRef = useRef<PlannerInput | null>(null);
   const started = useRef(false);
+  const [favoritedPlaceIds, setFavoritedPlaceIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [savedPlaceIds, setSavedPlaceIds] = useState<Set<string>>(new Set());
 
   const generate = useCallback(
     async (input: PlannerInput, refinement?: string, previous?: PlannedItinerary) => {
@@ -91,6 +95,32 @@ export function ResultClient() {
         setPhase("error");
       });
   }, [generate, router]);
+
+  // Which venues the traveller has already bookmarked, so the hearts on a
+  // freshly generated itinerary reflect reality. Best-effort: a failure here
+  // just means the controls start empty, which is recoverable by clicking.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const load = async (kind: "favorites" | "saved") => {
+        try {
+          const res = await fetch(`/api/bookmarks?kind=${kind}`);
+          if (!res.ok) return new Set<string>();
+          const { placeIds } = (await res.json()) as { placeIds: string[] };
+          return new Set(placeIds ?? []);
+        } catch {
+          return new Set<string>();
+        }
+      };
+      const [favs, saves] = await Promise.all([load("favorites"), load("saved")]);
+      if (cancelled) return;
+      setFavoritedPlaceIds(favs);
+      setSavedPlaceIds(saves);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function refine(text: string) {
     if (!inputRef.current || !result) return;
@@ -261,6 +291,8 @@ export function ResultClient() {
               day={day}
               city={it.input.city}
               showHeader={multiDay}
+              favoritedPlaceIds={favoritedPlaceIds}
+              savedPlaceIds={savedPlaceIds}
             />
           ))}
         </div>

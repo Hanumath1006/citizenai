@@ -17,10 +17,14 @@ export function DayItinerary({
   day,
   city,
   showHeader,
+  favoritedPlaceIds,
+  savedPlaceIds,
 }: {
   day: ItineraryDay;
   city: string;
   showHeader: boolean;
+  favoritedPlaceIds?: ReadonlySet<string>;
+  savedPlaceIds?: ReadonlySet<string>;
 }) {
   const dayCost = formatCostRange(day.estCostLow, day.estCostHigh);
 
@@ -73,6 +77,8 @@ export function DayItinerary({
           stop={stop}
           isLast={i === day.stops.length - 1}
           city={city}
+          favoritedPlaceIds={favoritedPlaceIds}
+          savedPlaceIds={savedPlaceIds}
         />
       ))}
     </section>

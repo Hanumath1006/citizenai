@@ -17,10 +17,15 @@ export function StopCard({
   stop,
   isLast,
   city,
+  favoritedPlaceIds,
+  savedPlaceIds,
 }: {
   stop: ItineraryStop;
   isLast: boolean;
   city: string;
+  /** Place ids the user has already favourited/saved, for initial state. */
+  favoritedPlaceIds?: ReadonlySet<string>;
+  savedPlaceIds?: ReadonlySet<string>;
 }) {
   return (
     <div className="relative">
@@ -70,7 +75,16 @@ export function StopCard({
                   <span className="text-sm font-semibold text-ink">
                     {formatTime(stop.arriveTime)}
                   </span>
-                  <BookmarkButtons stop={stop} city={city} />
+                  <BookmarkButtons
+                    stop={stop}
+                    city={city}
+                    initialFavorited={Boolean(
+                      stop.placeId && favoritedPlaceIds?.has(stop.placeId)
+                    )}
+                    initialSaved={Boolean(
+                      stop.placeId && savedPlaceIds?.has(stop.placeId)
+                    )}
+                  />
                 </div>
               </div>
 
