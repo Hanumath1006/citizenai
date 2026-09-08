@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Calendar, Clock, Sparkles } from "lucide-react";
 import {
@@ -16,15 +16,22 @@ import {
 } from "@/lib/types";
 import { Label, Input, Select, Pill } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/Button";
-import { saveInput, clearResult } from "@/lib/plannerSession";
+import { saveInput, loadInput, clearResult } from "@/lib/plannerSession";
 import { cn } from "@/lib/utils";
 
 const TRANSPORTS: Transport[] = ["walking", "driving", "uber", "public"];
 
 export function PlannerForm({
   defaults,
+  prefillFromSession = false,
 }: {
   defaults?: Partial<PlannerInput> & { city?: string };
+  /**
+   * Restore the inputs from the last generated plan instead of the profile
+   * defaults. Set when arriving from an itinerary's Edit button, so the form
+   * opens on exactly what produced that plan rather than a blank slate.
+   */
+  prefillFromSession?: boolean;
 }) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
@@ -48,6 +55,26 @@ export function PlannerForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // sessionStorage is unavailable while rendering on the server, so the
+  // restore happens after mount rather than in the initial state. The form
+  // is briefly seeded with the profile defaults, which is the correct
+  // fallback anyway if there is nothing stored to restore.
+  useEffect(() => {
+    if (!prefillFromSession) return;
+    const saved = loadInput();
+    if (!saved) return;
+
+    setCity(saved.city);
+    setDate(saved.date);
+    setEndDate(saved.endDate || saved.date);
+    setTimeStart(saved.timeStart);
+    setTimeEnd(saved.timeEnd);
+    setBudget(saved.budget);
+    setTravelStyle(saved.travelStyle);
+    setTransport(saved.transport);
+    setInterests(saved.interests ?? []);
+  }, [prefillFromSession]);
 
   const dayCount = requestedDayCount(date, endDate);
   const multiDay = dayCount > 1;

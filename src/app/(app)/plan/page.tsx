@@ -5,25 +5,36 @@ import type { Budget, Transport, TravelStyle } from "@/lib/types";
 
 export const metadata = { title: "Plan an outing — CitizenAI" };
 
-export default async function PlanPage() {
-  const profile = await getProfile();
+export default async function PlanPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string }>;
+}) {
+  const [profile, { edit }] = await Promise.all([getProfile(), searchParams]);
+
+  // ?edit=1 means "change the plan I just got" rather than "start fresh", so
+  // the form restores the inputs that produced it instead of profile defaults.
+  const editing = edit === "1";
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-10">
       <header className="mb-8">
         <span className="text-xs font-semibold uppercase tracking-wide text-accent">
-          New outing
+          {editing ? "Edit plan" : "New outing"}
         </span>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">
-          Let&apos;s plan something
+          {editing ? "Change your inputs" : "Let's plan something"}
         </h1>
         <p className="mt-2 text-muted">
-          Tell us where, when, and what you love — we&apos;ll handle the rest.
+          {editing
+            ? "Adjust anything below and we'll rebuild the itinerary from scratch."
+            : "Tell us where, when, and what you love — we'll handle the rest."}
         </p>
       </header>
 
       <Card className="p-6 sm:p-8">
         <PlannerForm
+          prefillFromSession={editing}
           defaults={{
             city: profile?.home_city ?? "",
             budget: (profile?.default_budget as Budget) ?? undefined,

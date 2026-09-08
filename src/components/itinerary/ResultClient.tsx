@@ -193,8 +193,8 @@ export function ResultClient() {
         <h1 className="text-xl font-semibold">We hit a snag</h1>
         <p className="mt-2 text-muted">{error}</p>
         <div className="mt-6 flex justify-center gap-3">
-          <Button variant="secondary" href="/plan">
-            <ArrowLeft className="h-4 w-4" /> Back to planner
+          <Button variant="secondary" href="/plan?edit=1">
+            <ArrowLeft className="h-4 w-4" /> Edit inputs
           </Button>
           <Button onClick={retry}>
             <RotateCcw className="h-4 w-4" /> Try again
@@ -213,7 +213,7 @@ export function ResultClient() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-8">
       <button
-        onClick={() => router.push("/plan")}
+        onClick={() => router.push("/plan?edit=1")}
         className="mb-5 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"
       >
         <ArrowLeft className="h-4 w-4" /> Back to planner
@@ -266,7 +266,7 @@ export function ResultClient() {
 
       {/* Refinement */}
       <div className="mt-6">
-        <RefinementBar onRefine={refine} busy={refining} />
+        <RefinementBar onRefine={refine} busy={refining} editHref="/plan?edit=1" />
       </div>
 
       {error && (

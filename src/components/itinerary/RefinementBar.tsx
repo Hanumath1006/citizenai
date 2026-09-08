@@ -1,16 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Wand2, ArrowRight } from "lucide-react";
+import { Wand2, ArrowRight, Pencil } from "lucide-react";
 import { REFINEMENTS } from "@/lib/types";
 import { Pill } from "@/components/ui/primitives";
+import { Button } from "@/components/ui/Button";
 
 export function RefinementBar({
   onRefine,
   busy,
+  editHref,
 }: {
   onRefine: (text: string) => void;
   busy: boolean;
+  /**
+   * Where "Edit inputs" goes. Lives in this card because editing the
+   * original inputs is the other way to change the plan — the refinements
+   * above adjust the result, this changes what produced it.
+   */
+  editHref?: string;
 }) {
   const [text, setText] = useState("");
 
@@ -55,6 +63,18 @@ export function RefinementBar({
           <ArrowRight className="h-4 w-4" />
         </button>
       </form>
+
+      {editHref && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+          <p className="text-sm text-muted">
+            Wrong city, dates or budget? Change the inputs instead.
+          </p>
+          <Button href={editHref} variant="secondary" size="sm">
+            <Pencil className="h-4 w-4" />
+            Edit inputs
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

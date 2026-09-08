@@ -61,7 +61,12 @@ export async function updateSession(request: NextRequest) {
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("next", pathname);
+    // Clear the original page's query before building the login URL, then
+    // carry the full path *and* its search in `next`. Cloning keeps the old
+    // params, which both littered /login with them and dropped them from the
+    // return trip — so /plan?edit=1 came back as a blank /plan after signing in.
+    url.search = "";
+    url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(url);
   }
 
