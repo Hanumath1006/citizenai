@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAccountState, touchLastSeen } from "@/lib/auth";
-import { Sidebar } from "@/components/app/Sidebar";
-import { MobileTopBar } from "@/components/app/MobileTopBar";
+import { AppShell } from "@/components/app/AppShell";
 
 export default async function AppLayout({
   children,
@@ -19,15 +18,7 @@ export default async function AppLayout({
 
   await touchLastSeen(account.userId);
 
-  const isAdmin = account.role === "admin";
-
   return (
-    <div className="flex min-h-screen bg-canvas">
-      <Sidebar isAdmin={isAdmin} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <MobileTopBar isAdmin={isAdmin} />
-        <main className="flex-1">{children}</main>
-      </div>
-    </div>
+    <AppShell isAdmin={account.role === "admin"}>{children}</AppShell>
   );
 }
