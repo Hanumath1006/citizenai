@@ -22,13 +22,13 @@ export function MobileTopBar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
 
   return (
-    // Mirrors the desktop sidebar: sandy brown with white reversed out.
-    <div className="lg:hidden sticky top-0 z-40 bg-accent text-white">
+    // Mirrors the desktop sidebar: dark rail with white reversed out.
+    <div className="lg:hidden sticky top-0 z-40 bg-ink text-white">
       <div className="flex h-14 items-center justify-between px-4">
         <Logo onDark />
         <button
           onClick={() => setOpen((v) => !v)}
-          className="grid h-9 w-9 place-items-center rounded-lg text-white hover:bg-white/15"
+          className="grid h-9 w-9 place-items-center rounded-lg text-white hover:bg-white/10"
           aria-label="Menu"
           aria-expanded={open}
         >
@@ -36,15 +36,17 @@ export function MobileTopBar({ isAdmin = false }: { isAdmin?: boolean }) {
         </button>
       </div>
       {open && (
-        <nav className="border-t border-white/20 px-3 py-3">
+        <nav className="border-t border-white/10 px-3 py-3">
           {[...nav, ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : [])].map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
               className={cn(
-                "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-white",
-                pathname.startsWith(item.href) ? "bg-ink/85" : "hover:bg-white/15"
+                "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium",
+                pathname.startsWith(item.href)
+                  ? "bg-brand text-white"
+                  : "text-white/60 hover:bg-white/5 hover:text-white"
               )}
             >
               {item.label === "Plan an outing" && (

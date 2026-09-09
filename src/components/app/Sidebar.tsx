@@ -91,7 +91,7 @@ export function Sidebar({
       }}
       className={cn(
         "fixed inset-y-0 left-0 z-40 hidden flex-col overflow-hidden",
-        "bg-accent px-3 py-6 shadow-[var(--shadow-float)] lg:flex",
+        "bg-ink px-3 py-6 shadow-[var(--shadow-float)] lg:flex",
         "transition-[width] duration-200 ease-out",
         open ? "w-64" : "w-[4.5rem]"
       )}
@@ -111,7 +111,7 @@ export function Sidebar({
           title={pinned ? "Unpin the sidebar" : "Keep the sidebar open"}
           className={cn(
             "ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white transition-all duration-200",
-            pinned ? "bg-ink/85" : "hover:bg-white/20",
+            pinned ? "bg-brand" : "hover:bg-white/10",
             open ? "opacity-100" : "pointer-events-none opacity-0"
           )}
         >
@@ -129,10 +129,10 @@ export function Sidebar({
               href={item.href}
               title={item.label}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white transition-colors",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                 active
-                  ? "bg-ink/85 shadow-[0_2px_10px_rgba(44,33,21,0.25)]"
-                  : "hover:bg-white/15"
+                  ? "bg-brand text-white"
+                  : "text-white/60 hover:bg-white/5 hover:text-white"
               )}
             >
               <item.icon className="h-4.5 w-4.5 shrink-0" />
@@ -153,7 +153,7 @@ export function Sidebar({
           <Link
             href="/admin"
             title="Admin"
-            className="mt-2 flex items-center gap-3 rounded-xl border border-white/35 px-3 py-2.5 text-sm font-medium text-white transition-colors hover:border-white/60 hover:bg-white/15"
+            className="mt-2 flex items-center gap-3 rounded-xl border border-white/20 px-3 py-2.5 text-sm font-medium text-white/60 transition-colors hover:border-white/40 hover:bg-white/5 hover:text-white"
           >
             <ShieldCheck className="h-4.5 w-4.5 shrink-0" />
             <span
@@ -171,17 +171,17 @@ export function Sidebar({
       {/* Plan CTA — a full card when open, a single button when collapsed. */}
       <div className="mt-auto">
         {open ? (
-          <div className="rounded-[var(--radius-card)] bg-ink/85 p-5">
+          <div className="rounded-[var(--radius-card)] bg-white/5 p-5">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Sparkles className="h-4 w-4 shrink-0" />
+              <Sparkles className="h-4 w-4 shrink-0 text-brand" />
               <span className="truncate">Plan smarter with AI</span>
             </div>
-            <p className="mt-1.5 text-xs leading-relaxed text-white/80">
+            <p className="mt-1.5 text-xs leading-relaxed text-white/60">
               Personalized recommendations and real-time updates.
             </p>
             <Link
               href="/plan"
-              className="mt-4 flex h-10 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-canvas text-sm font-medium text-ink transition hover:bg-white"
+              className="mt-4 flex h-10 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-white text-sm font-medium text-ink transition hover:bg-white/90"
             >
               <Sparkles className="h-3.5 w-3.5" />
               Plan a new outing
@@ -192,7 +192,7 @@ export function Sidebar({
             href="/plan"
             title="Plan a new outing"
             aria-label="Plan a new outing"
-            className="grid h-11 w-11 place-items-center rounded-[var(--radius-card)] bg-ink/85 text-white transition hover:bg-ink"
+            className="grid h-11 w-11 place-items-center rounded-[var(--radius-card)] bg-brand text-white transition hover:opacity-90"
           >
             <Sparkles className="h-4.5 w-4.5" />
           </Link>

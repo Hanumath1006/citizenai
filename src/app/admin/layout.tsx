@@ -21,10 +21,7 @@ export default async function AdminLayout({
   const name = admin.fullName || admin.email.split("@")[0];
 
   return (
-    // data-surface="admin" restores the original neutral palette for
-    // everything inside; see the token block in globals.css. The traveller-
-    // facing "Sandy Brown" theme deliberately stops at this boundary.
-    <div data-surface="admin" className="flex min-h-screen bg-canvas">
+    <div className="flex min-h-screen bg-canvas">
       <AdminSidebar
         name={name}
         email={admin.email}

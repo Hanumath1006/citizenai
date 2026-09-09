@@ -11,7 +11,7 @@ export function Logo({
 }: {
   href?: string;
   showTagline?: boolean;
-  /** Reverse the mark out of a coloured surface, e.g. the sandy sidebar. */
+  /** Reverse the mark out of a dark surface, e.g. the sidebar rail. */
   onDark?: boolean;
   /**
    * Fade out the text and let the mark stand alone, for the collapsed
@@ -29,7 +29,7 @@ export function Logo({
       <span
         className={cn(
           "grid h-9 w-9 shrink-0 place-items-center rounded-xl",
-          onDark ? "bg-white text-accent" : "bg-ink text-white"
+          onDark ? "bg-brand text-white" : "bg-ink text-white"
         )}
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
@@ -58,7 +58,7 @@ export function Logo({
           <span
             className={cn(
               "block truncate text-[0.7rem]",
-              onDark ? "text-white/80" : "text-faint"
+              onDark ? "text-white/50" : "text-faint"
             )}
           >
             Your AI city companion
