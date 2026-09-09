@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Menu,
 } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";
 
 /* ──────────────────────────────────────────────────────────────
@@ -83,35 +84,26 @@ export function Sidebar({
       )}
       aria-label="Main navigation"
     >
-      {/* Toggle + wordmark */}
+      {/* Brand on the left, pin toggle on the right. Collapsed, the rail is
+          only wide enough for one of them, and the mark is the one worth
+          keeping — the whole rail is the hover target, so the toggle can
+          wait until there is room for it. */}
       <div className="flex items-center gap-2.5 px-1.5">
+        <Logo href="/dashboard" onDark showTagline hideWordmark={!open} />
+
         <button
           onClick={onTogglePin}
           aria-expanded={open}
           aria-label={pinned ? "Unpin the sidebar" : "Keep the sidebar open"}
           title={pinned ? "Unpin the sidebar" : "Keep the sidebar open"}
           className={cn(
-            "grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white transition-colors",
-            pinned ? "bg-ink/85" : "hover:bg-white/20"
+            "ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white transition-all duration-200",
+            pinned ? "bg-ink/85" : "hover:bg-white/20",
+            open ? "opacity-100" : "pointer-events-none opacity-0"
           )}
         >
           <Menu className="h-5 w-5" />
         </button>
-
-        <Link
-          href="/dashboard"
-          className={cn(
-            "min-w-0 leading-tight transition-opacity duration-200",
-            open ? "opacity-100" : "pointer-events-none opacity-0"
-          )}
-        >
-          <span className="block truncate text-[0.95rem] font-semibold tracking-tight text-white">
-            CitizenAI
-          </span>
-          <span className="block truncate text-[0.7rem] text-white/80">
-            Your AI city companion
-          </span>
-        </Link>
       </div>
 
       <nav className="mt-8 flex flex-col gap-1">

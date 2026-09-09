@@ -6,19 +6,29 @@ export function Logo({
   href = "/",
   showTagline = false,
   onDark = false,
+  hideWordmark = false,
   className,
 }: {
   href?: string;
   showTagline?: boolean;
   /** Reverse the mark out of a coloured surface, e.g. the sandy sidebar. */
   onDark?: boolean;
+  /**
+   * Fade out the text and let the mark stand alone, for the collapsed
+   * sidebar rail. The words stay in the DOM so screen readers still get the
+   * name, and so widening the rail animates rather than popping.
+   */
+  hideWordmark?: boolean;
   className?: string;
 }) {
   return (
-    <Link href={href} className={cn("flex items-center gap-2.5", className)}>
+    <Link
+      href={href}
+      className={cn("flex min-w-0 items-center gap-2.5", className)}
+    >
       <span
         className={cn(
-          "grid h-9 w-9 place-items-center rounded-xl",
+          "grid h-9 w-9 shrink-0 place-items-center rounded-xl",
           onDark ? "bg-white text-accent" : "bg-ink text-white"
         )}
       >
@@ -30,10 +40,15 @@ export function Logo({
           />
         </svg>
       </span>
-      <span className="leading-tight">
+      <span
+        className={cn(
+          "min-w-0 leading-tight transition-opacity duration-200",
+          hideWordmark && "pointer-events-none opacity-0"
+        )}
+      >
         <span
           className={cn(
-            "block text-[0.95rem] font-semibold tracking-tight",
+            "block truncate text-[0.95rem] font-semibold tracking-tight",
             onDark ? "text-white" : "text-ink"
           )}
         >
@@ -42,7 +57,7 @@ export function Logo({
         {showTagline && (
           <span
             className={cn(
-              "block text-[0.7rem]",
+              "block truncate text-[0.7rem]",
               onDark ? "text-white/80" : "text-faint"
             )}
           >
