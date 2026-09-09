@@ -68,7 +68,20 @@ export function Sidebar({
     <aside
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onFocusCapture={() => setFocused(true)}
+      onFocusCapture={(e) => {
+        // Only KEYBOARD focus holds the rail open. Clicking a button also
+        // focuses it, and counting that made unpinning impossible: the
+        // click cleared `pinned`, `focused` instantly took its place, and
+        // because the button kept focus after the pointer left, the rail
+        // never collapsed. :focus-visible is exactly this distinction.
+        const el = e.target as HTMLElement;
+        try {
+          if (el.matches(":focus-visible")) setFocused(true);
+        } catch {
+          // Ancient browser without :focus-visible — fall back to hover
+          // only, which still leaves the rail usable.
+        }
+      }}
       onBlurCapture={(e) => {
         // Only collapse once focus has left the sidebar entirely, rather
         // than on every tab between its own links.
