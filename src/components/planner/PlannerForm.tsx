@@ -17,6 +17,7 @@ import {
 import { Label, Input, Select, Pill } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/Button";
 import { saveInput, loadInput, clearResult } from "@/lib/plannerSession";
+import { WeatherPeek } from "@/components/planner/WeatherPeek";
 import { cn } from "@/lib/utils";
 
 const TRANSPORTS: Transport[] = ["walking", "driving", "uber", "public"];
@@ -164,6 +165,11 @@ export function PlannerForm({
               ? `${dayCount}-day trip — you'll get a plan for each day.`
               : "Same day for a single outing, or pick a later end date for a trip."}
           </p>
+          <WeatherPeek
+            city={city}
+            date={date}
+            label={multiDay ? "on your first day" : "on the day"}
+          />
         </div>
         <div className="space-y-2">
           <Label>
