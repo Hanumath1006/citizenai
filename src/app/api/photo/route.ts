@@ -35,7 +35,10 @@ export async function GET(request: Request) {
     status: 200,
     headers: {
       "Content-Type": photo.contentType,
-      "Cache-Control": "public, max-age=86400, immutable",
+      // s-maxage + stale-while-revalidate let Vercel's CDN serve repeat and
+      // shared views straight from the edge instead of re-hitting Google.
+      "Cache-Control":
+        "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800, immutable",
     },
   });
 }

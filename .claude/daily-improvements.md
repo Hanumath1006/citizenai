@@ -16,10 +16,6 @@ takes the **first unchecked item**, implements it, verifies it, and opens a bran
 
 ## Queue
 
-- [ ] **Cache photos at the edge.** `src/app/api/photo/route.ts` sets a private
-      `Cache-Control`. Add `s-maxage` + `stale-while-revalidate` so Vercel's CDN
-      serves repeat and shared views without re-hitting Google. Cheapest single win
-      on the Maps bill.
 - [ ] **Record the HTTP status on photo failures.** The photo proxy records `ok`
       but not `statusCode`, so the admin Provider Health panel can't tell an expired
       photo name (400) from a quota block (429). Pass the status through to
@@ -57,3 +53,8 @@ takes the **first unchecked item**, implements it, verifies it, and opens a bran
 ## Done
 
 <!-- Ticked items get moved down here with their date and branch. -->
+
+- [x] **Cache photos at the edge.** `src/app/api/photo/route.ts` sets a private
+      `Cache-Control`. Add `s-maxage` + `stale-while-revalidate` so Vercel's CDN
+      serves repeat and shared views without re-hitting Google. Cheapest single win
+      on the Maps bill. — 2026-09-15, `daily/2026-09-15`
