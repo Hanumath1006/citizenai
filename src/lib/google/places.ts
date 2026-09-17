@@ -132,9 +132,12 @@ export function photoProxyUrl(photoName: string | null, width = 1200) {
 export async function fetchPhotoBytes(
   photoName: string,
   width: number
-): Promise<{ body: ArrayBuffer; contentType: string } | null> {
+): Promise<
+  | { body: ArrayBuffer; contentType: string; statusCode: number }
+  | { body: null; statusCode: number | null }
+> {
   const apiKey = key();
-  if (!apiKey) return null;
+  if (!apiKey) return { body: null, statusCode: null };
   try {
     const url = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${width}&key=${apiKey}`;
     const res = await fetch(url, { next: { revalidate: 60 * 60 * 24 } });
@@ -143,13 +146,14 @@ export async function fetchPhotoBytes(
       console.error(
         `[places] photo fetch failed — HTTP ${res.status}: ${detail.slice(0, 300)}`
       );
-      return null;
+      return { body: null, statusCode: res.status };
     }
     return {
       body: await res.arrayBuffer(),
       contentType: res.headers.get("content-type") ?? "image/jpeg",
+      statusCode: res.status,
     };
   } catch {
-    return null;
+    return { body: null, statusCode: null };
   }
 }

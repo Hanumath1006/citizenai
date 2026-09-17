@@ -24,10 +24,11 @@ export async function GET(request: Request) {
     operation: "photo",
     unitPrice: PRICING.placesPhoto,
     latencyMs: Date.now() - startedAt,
-    ok: Boolean(photo),
+    ok: Boolean(photo.body),
+    statusCode: photo.statusCode ?? undefined,
   });
 
-  if (!photo) {
+  if (!photo.body) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 

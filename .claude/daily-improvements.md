@@ -16,10 +16,6 @@ takes the **first unchecked item**, implements it, verifies it, and opens a bran
 
 ## Queue
 
-- [ ] **Record the HTTP status on photo failures.** The photo proxy records `ok`
-      but not `statusCode`, so the admin Provider Health panel can't tell an expired
-      photo name (400) from a quota block (429). Pass the status through to
-      `recordStandaloneCall`.
 - [ ] **Fix the Places price tier.** `PRICE_PLACES_TEXT_SEARCH` in
       `src/lib/usage/pricing.ts` defaults to the Pro rate (0.032), but the field mask
       in `src/lib/places.ts` requests `rating` and `regularOpeningHours`, which bills
@@ -58,3 +54,7 @@ takes the **first unchecked item**, implements it, verifies it, and opens a bran
       `Cache-Control`. Add `s-maxage` + `stale-while-revalidate` so Vercel's CDN
       serves repeat and shared views without re-hitting Google. Cheapest single win
       on the Maps bill. — 2026-09-15, `daily/2026-09-15`
+- [x] **Record the HTTP status on photo failures.** The photo proxy records `ok`
+      but not `statusCode`, so the admin Provider Health panel can't tell an expired
+      photo name (400) from a quota block (429). Pass the status through to
+      `recordStandaloneCall`. — 2026-09-17, `daily/2026-09-17`
