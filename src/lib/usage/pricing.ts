@@ -30,9 +30,14 @@ export const PRICING = {
   get geminiOutputPerMTok() {
     return rate("PRICE_GEMINI_OUTPUT_PER_MTOK", 2.5);
   },
-  /** Places API (New) Text Search, Pro SKU — we request rating/hours/photos. */
+  /**
+   * Places API (New) Text Search, Enterprise SKU. The request is billed at the
+   * highest tier of any field in its mask, and `rating` and
+   * `regularOpeningHours` are Enterprise (photos alone would be Pro, 0.032).
+   * Drop those two fields from the mask in google/places.ts to fall back to Pro.
+   */
   get placesTextSearch() {
-    return rate("PRICE_PLACES_TEXT_SEARCH", 0.032);
+    return rate("PRICE_PLACES_TEXT_SEARCH", 0.035);
   },
   /** Places Photo media fetch. */
   get placesPhoto() {

@@ -16,10 +16,6 @@ takes the **first unchecked item**, implements it, verifies it, and opens a bran
 
 ## Queue
 
-- [ ] **Fix the Places price tier.** `PRICE_PLACES_TEXT_SEARCH` in
-      `src/lib/usage/pricing.ts` defaults to the Pro rate (0.032), but the field mask
-      in `src/lib/places.ts` requests `rating` and `regularOpeningHours`, which bills
-      as Enterprise. Correct the default and note the SKU in the comment.
 - [ ] **`aria-live` on the planner error.** The validation error in
       `src/components/planner/PlannerForm.tsx` renders silently for screen readers.
       Wrap it in a polite live region.
@@ -58,3 +54,8 @@ takes the **first unchecked item**, implements it, verifies it, and opens a bran
       but not `statusCode`, so the admin Provider Health panel can't tell an expired
       photo name (400) from a quota block (429). Pass the status through to
       `recordStandaloneCall`. — 2026-09-17, `daily/2026-09-17`
+- [x] **Fix the Places price tier.** `PRICE_PLACES_TEXT_SEARCH` in
+      `src/lib/usage/pricing.ts` defaulted to the Pro rate (0.032), but the field mask
+      in `src/lib/google/places.ts` requests `rating` and `regularOpeningHours`, which
+      bills as Enterprise. Default is now 0.035, with the SKU noted in the comment.
+      — 2026-09-21, `daily/2026-09-21`
