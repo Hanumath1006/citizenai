@@ -16,9 +16,6 @@ takes the **first unchecked item**, implements it, verifies it, and opens a bran
 
 ## Queue
 
-- [ ] **`aria-live` on the planner error.** The validation error in
-      `src/components/planner/PlannerForm.tsx` renders silently for screen readers.
-      Wrap it in a polite live region.
 - [ ] **Forecast per day in the planner peek.** `WeatherPeek` shows the first day
       only. For a multi-day range, show a compact row of one icon per day using
       `getForecastRange`, so a rainy Wednesday is visible before generating.
@@ -59,3 +56,7 @@ takes the **first unchecked item**, implements it, verifies it, and opens a bran
       in `src/lib/google/places.ts` requests `rating` and `regularOpeningHours`, which
       bills as Enterprise. Default is now 0.035, with the SKU noted in the comment.
       — 2026-09-21, `daily/2026-09-21`
+- [x] **`aria-live` on the planner error.** The validation error in
+      `src/components/planner/PlannerForm.tsx` renders silently for screen readers.
+      Now wrapped in an always-mounted polite live region. — 2026-10-08,
+      `daily/2026-10-08`

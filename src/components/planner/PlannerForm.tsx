@@ -251,11 +251,15 @@ export function PlannerForm({
         </div>
       </div>
 
-      {error && (
-        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-          {error}
-        </p>
-      )}
+      {/* The live region stays mounted so screen readers are already watching
+          it when an error appears; one inserted with its text isn't announced. */}
+      <div aria-live="polite">
+        {error && (
+          <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+      </div>
 
       <div className={cn("flex justify-end pt-2")}>
         <Button type="submit" size="lg" disabled={submitting}>
