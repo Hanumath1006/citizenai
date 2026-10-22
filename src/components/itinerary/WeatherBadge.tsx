@@ -1,7 +1,8 @@
 import { Cloud, CloudRain, CloudSnow, Sun, CloudSun } from "lucide-react";
 import type { WeatherSummary } from "@/lib/types";
 
-function iconFor(condition: string | null) {
+/** Condition → icon. Exported so the planner's per-day row matches this badge. */
+export function iconFor(condition: string | null) {
   const c = (condition ?? "").toLowerCase();
   if (c.includes("rain") || c.includes("drizzle")) return CloudRain;
   if (c.includes("snow")) return CloudSnow;

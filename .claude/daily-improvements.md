@@ -16,9 +16,6 @@ takes the **first unchecked item**, implements it, verifies it, and opens a bran
 
 ## Queue
 
-- [ ] **Forecast per day in the planner peek.** `WeatherPeek` shows the first day
-      only. For a multi-day range, show a compact row of one icon per day using
-      `getForecastRange`, so a rainy Wednesday is visible before generating.
 - [ ] **Empty states for Favorites and Saved Places.** Both lists render bare when
       empty. Add an illustration-free empty state with a line of copy and a link to
       `/plan`.
@@ -60,3 +57,7 @@ takes the **first unchecked item**, implements it, verifies it, and opens a bran
       `src/components/planner/PlannerForm.tsx` renders silently for screen readers.
       Now wrapped in an always-mounted polite live region. — 2026-10-08,
       `daily/2026-10-08`
+- [x] **Forecast per day in the planner peek.** A date range now shows one chip
+      per day (weekday, icon, temp) from a single upstream request, with days
+      past the five-day window dropped rather than rendered blank. — 2026-10-22,
+      committed directly to `main`
