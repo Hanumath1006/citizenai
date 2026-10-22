@@ -4,17 +4,14 @@
       "Bash(npx tsc *)",
       "Bash(npm run *)",
       "Bash(npm install *)",
+      "Bash(git fetch *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(rm -rf .next)",
       "WebSearch",
       "WebFetch(domain:developers.google.com)",
-      "Bash(git fetch *)",
-      "Bash(sed -n '/export const MAX_TRIP_DAYS/,/^}/p' src/lib/types.ts)",
-      "Bash(sed -n '/export function tripDates/,/^}/p' src/lib/types.ts)",
-      "Bash(sed -n '/export function requestedDayCount/,/^}/p' src/lib/types.ts)",
-      "Bash(curl -s -o /dev/null -w \"zz-weather-peek status=%{http_code}\\\\n\" --max-time 60 http://localhost:3000/zz-weather-peek)",
-      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" --max-time 90 http://localhost:3000/zz-weather-peek)",
-      "Bash(curl -s -o /dev/null --max-time 5 http://localhost:3000/zz-weather-peek)",
-      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" --max-time 60 http://localhost:3000/zz-weather-peek)",
-      "Bash(rm -rf .next)"
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('.claude/settings.local.json','utf8'\\)\\);console.log\\('valid JSON'\\)\")",
+      "Bash(git add *)"
     ]
   }
 }
